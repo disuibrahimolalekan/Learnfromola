@@ -1,12 +1,16 @@
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import { isRequired, isValidEmail, isValidPassword } from "@/lib/validators";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function CreateAccountPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,15 +34,36 @@ export default function CreateAccountPage() {
     return next;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const next = validate();
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    // TODO (Phase 2): replace with real account-creation call.
     setLoading(true);
-    setTimeout(() => setLoading(false), 900);
+
+    // NOTE: this does not yet check whether this email actually purchased
+    // the course on Selar — that guard is added once Selar is connected.
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: { full_name: fullName.trim() },
+      },
+    });
+
+    setLoading(false);
+
+    if (error) {
+      if (error.message.toLowerCase().includes("already registered")) {
+        setErrors({ email: "An account with this email already exists." });
+      } else {
+        setErrors({ email: "Something went wrong. Please try again." });
+      }
+      return;
+    }
+
+    router.push("/dashboard");
   }
 
   return (
