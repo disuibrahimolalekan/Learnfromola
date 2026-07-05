@@ -5,6 +5,7 @@ import Link from "next/link";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import { isRequired, isValidEmail } from "@/lib/validators";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -18,18 +19,17 @@ export default function ForgotPasswordPage() {
     return "";
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const next = validate();
     setError(next);
     if (next) return;
 
-    // TODO (Phase 2): replace with real password-reset call.
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-    }, 900);
+    await supabase.auth.resetPasswordForEmail(email.trim());
+    setLoading(false);
+
+    setSubmitted(true);
   }
 
   return (
@@ -72,4 +72,4 @@ export default function ForgotPasswordPage() {
       </p>
     </div>
   );
-        }
+              }
