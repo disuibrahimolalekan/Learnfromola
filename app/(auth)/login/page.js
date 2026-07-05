@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import { isRequired, isValidEmail } from "@/lib/validators";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
@@ -20,15 +23,27 @@ export default function LoginPage() {
     return next;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const next = validate();
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    // TODO (Phase 2): replace with real authentication call.
     setLoading(true);
-    setTimeout(() => setLoading(false), 900);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrors({ password: "That email and password don't match." });
+      return;
+    }
+
+    router.push("/dashboard");
   }
 
   return (
@@ -82,4 +97,4 @@ export default function LoginPage() {
       </p>
     </div>
   );
-            }
+}
