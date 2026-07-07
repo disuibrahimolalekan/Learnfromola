@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
+import PasswordChecklist from "@/components/ui/PasswordChecklist";
 import { isRequired, isValidEmail, isValidPassword } from "@/lib/validators";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -25,7 +26,9 @@ export default function CreateAccountPage() {
     else if (!isValidEmail(email)) next.email = "That email doesn't look right.";
 
     if (!isRequired(password)) next.password = "Create a password.";
-    else if (!isValidPassword(password)) next.password = "Use at least 8 characters.";
+    else if (!isValidPassword(password))
+      next.password =
+        "Password needs 6+ characters, an uppercase letter, a number, and a special character.";
 
     if (!isRequired(confirmPassword)) next.confirmPassword = "Confirm your password.";
     else if (confirmPassword !== password) next.confirmPassword = "Passwords don't match.";
@@ -117,9 +120,10 @@ export default function CreateAccountPage() {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder="At least 6 characters"
           error={errors.password}
         />
+        <PasswordChecklist password={password} />
 
         <TextField
           id="confirmPassword"
