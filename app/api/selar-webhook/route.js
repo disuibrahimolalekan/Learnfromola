@@ -36,6 +36,10 @@ function extractOrderId(body) {
   );
 }
 
+function extractProductCode(body) {
+  return body?.product_code || body?.data?.product_code || null;
+}
+
 export async function POST(request) {
   const { searchParams } = new URL(request.url);
   const providedSecret = searchParams.get("secret");
@@ -63,14 +67,12 @@ export async function POST(request) {
     );
   }
 
-  const { error } = await supabaseAdmin.from("purchases").upsert(
-    {
-      email: email.trim().toLowerCase(),
-      full_name: extractBuyerName(body),
-      selar_order_id: extractOrderId(body),
-    },
-    { onConflict: "email" }
-  );
+  const { error } = await supabaseAdmin.from("purchases").insert({
+    email: email.trim().toLowerCase(),
+    full_name: extractBuyerName(body),
+    selar_order_id: extractOrderId(body),
+    product_code: extractProductCode(body),
+  });
 
   if (error) {
     console.error("Failed to record purchase:", error.message);
