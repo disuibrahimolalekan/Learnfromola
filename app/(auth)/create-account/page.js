@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -42,8 +41,22 @@ export default function CreateAccountPage() {
 
     setLoading(true);
 
-    // NOTE: this does not yet check whether this email actually purchased
-    // the course on Selar — that guard is added once Selar is connected.
+    const checkResponse = await fetch("/api/check-purchase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
+    });
+
+    const checkResult = await checkResponse.json().catch(() => null);
+
+    if (!checkResult?.purchased) {
+      setLoading(false);
+      setErrors({
+        email: "We couldn't find a purchase with this email. Use the same email you bought the course with.",
+      });
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -130,4 +143,4 @@ export default function CreateAccountPage() {
       </p>
     </div>
   );
-    }
+            }
