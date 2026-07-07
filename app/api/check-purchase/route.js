@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+const COURSE_PRODUCT_CODE = "8713g4z88e";
+
 export async function POST(request) {
   const body = await request.json().catch(() => null);
   const email = body?.email?.trim().toLowerCase();
@@ -13,12 +15,13 @@ export async function POST(request) {
     .from("purchases")
     .select("id")
     .eq("email", email)
-    .maybeSingle();
+    .eq("product_code", COURSE_PRODUCT_CODE)
+    .limit(1);
 
   if (error) {
     console.error("check-purchase query failed:", error.message);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 
-  return NextResponse.json({ purchased: Boolean(data) });
+  return NextResponse.json({ purchased: Boolean(data && data.length > 0) });
 }
