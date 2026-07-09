@@ -95,7 +95,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={handleLogout}
-            className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-bg"
+            className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-bg active:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             Log out
           </button>
@@ -128,7 +128,18 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="mt-8 space-y-3">
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+          <p className="font-display text-base font-bold text-emerald-800">
+            This entire platform was vibe-coded with AI.
+          </p>
+          <p className="mt-1 text-sm font-semibold text-emerald-700">
+            Pay attention throughout this course, and by the end
+            you&apos;ll be able to build something just like it — maybe
+            even better.
+          </p>
+        </div>
+
+        <div className="mt-6 space-y-3">
           {MODULES.map((mod) => {
             const completedSet = completedByModule[mod.number] || new Set();
             const percent =
@@ -217,4 +228,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-              }
+        }
