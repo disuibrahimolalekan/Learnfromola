@@ -84,6 +84,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-bg pb-16">
       <div className="mx-auto max-w-2xl px-6 py-10">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-text-primary">
@@ -101,6 +102,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
+        {/* Overall progress */}
         <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-baseline justify-between">
             <span className="text-sm font-medium text-text-primary">
@@ -128,6 +130,7 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Vibe-coded encouragement message */}
         <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
           <p className="font-display text-base font-bold text-emerald-800">
             This entire platform was vibe-coded with AI.
@@ -139,6 +142,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Module list */}
         <div className="mt-6 space-y-3">
           {MODULES.map((mod) => {
             const completedSet = completedByModule[mod.number] || new Set();
@@ -170,8 +174,25 @@ export default function DashboardPage() {
               </Link>
             );
           })}
+
+          {/* Checklist — reference content, not a course module, so no progress bar */}
+          <Link
+            href="/checklist"
+            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Reference
+            </span>
+            <h2 className="mt-1 font-display text-base font-semibold text-text-primary">
+              Security & Deployment Checklist
+            </h2>
+            <p className="mt-1 text-xs text-text-secondary">
+              Review before and after deploying your projects
+            </p>
+          </Link>
         </div>
 
+        {/* Terms & Privacy footer */}
         <div className="mt-12 space-y-6 border-t border-border pt-8 text-xs leading-relaxed text-text-secondary">
           <div>
             <h3 className="mb-2 font-display text-sm font-semibold text-text-primary">
@@ -228,4 +249,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-        }
+    }
