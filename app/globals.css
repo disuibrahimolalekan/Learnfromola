@@ -30,3 +30,78 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-body);
 }
+/* Styling for markdown-rendered content (module intros, chapters, checklist) */
+.markdown-content h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--color-text-primary);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+.markdown-content h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+.markdown-content h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.markdown-content h4 {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdown-content p {
+  color: var(--color-text-primary);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+.markdown-content strong {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+  color: var(--color-text-primary);
+}
+.markdown-content ul {
+  list-style-type: disc;
+}
+.markdown-content ol {
+  list-style-type: decimal;
+}
+.markdown-content li {
+  margin-bottom: 0.35rem;
+  line-height: 1.6;
+}
+.markdown-content blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 1rem;
+  margin: 1.25rem 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 2rem 0;
+}
+.markdown-content code {
+  background: var(--color-bg);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
