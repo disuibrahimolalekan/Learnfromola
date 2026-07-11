@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { MODULES } from "@/lib/courseStructure";
 import ProgressBar from "@/components/ui/ProgressBar";
 
-export default function ModulePage({ params }) {
+export default function ModulePage() {
   const router = useRouter();
+  const params = useParams();
   const moduleNumber = Number(params.moduleNumber);
-
+  
   const [checking, setChecking] = useState(true);
   const [moduleRow, setModuleRow] = useState(null);
   const [chapters, setChapters] = useState([]);
