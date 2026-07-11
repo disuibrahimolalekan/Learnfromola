@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { MODULES } from "@/lib/courseStructure";
 import { formatQuotes } from "@/lib/formatContent";
+import FlowChart from "@/components/ui/FlowChart";
 
 // The stored chapter content still includes the "Chapter Quiz" section
 // (kept in Supabase in case quizzes come back into scope later), but
@@ -26,6 +27,7 @@ export default function ChapterReaderPage() {
 
   const [checking, setChecking] = useState(true);
   const [chapter, setChapter] = useState(null);
+  const [moduleHasIntro, setModuleHasIntro] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -39,24 +41,35 @@ export default function ChapterReaderPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("chapters")
-        .select("chapter_number, title, content")
-        .eq("module_number", moduleNumber)
-        .eq("chapter_number", chapterNumber)
-        .maybeSingle();
+      const [chapterResult, moduleResult] = await Promise.all([
+        supabase
+          .from("chapters")
+          .select("chapter_number, title, content")
+          .eq("module_number", moduleNumber)
+          .eq("chapter_number", chapterNumber)
+          .maybeSingle(),
+        supabase
+          .from("modules")
+          .select("intro_content")
+          .eq("number", moduleNumber)
+          .maybeSingle(),
+      ]);
 
-      if (error) {
-        console.error("Failed to load chapter:", error.message);
+      if (chapterResult.error) {
+        console.error("Failed to load chapter:", chapterResult.error.message);
+      }
+      if (moduleResult.error) {
+        console.error("Failed to load module:", moduleResult.error.message);
       }
 
-      if (!data) {
+      if (!chapterResult.data) {
         setNotFound(true);
         setChecking(false);
         return;
       }
 
-      setChapter(data);
+      setChapter(chapterResult.data);
+      setModuleHasIntro(Boolean(moduleResult.data?.intro_content));
       setChecking(false);
 
       // Mark this chapter as complete the moment it's opened. Check first
@@ -111,6 +124,11 @@ export default function ChapterReaderPage() {
   const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
   const isFirst = chapterNumber === 1;
   const isLast = moduleInfo ? chapterNumber === moduleInfo.chapterCount : false;
+  // Chapter 1 shows Previous only if this module has an intro to go back to.
+  const showPrevious = !isFirst || (isFirst && moduleHasIntro);
+  const previousHref = isFirst
+    ? `/module/${moduleNumber}/intro`
+    : `/module/${moduleNumber}/chapter/${chapterNumber - 1}`;
   const displayContent = formatQuotes(stripQuiz(chapter.content));
 
   return (
@@ -132,6 +150,20 @@ export default function ChapterReaderPage() {
           </h1>
         </div>
 
+        {moduleNumber === 2 && chapterNumber === 3 && (
+          <FlowChart
+            title="Example: Online Store User Flow"
+            steps={[
+              "Visit Homepage",
+              "Browse Products",
+              "Add to Cart",
+              "Checkout",
+              "Make Payment",
+              "Receive Order Confirmation",
+            ]}
+          />
+        )}
+
         <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <ReactMarkdown>{displayContent}</ReactMarkdown>
         </div>
@@ -140,9 +172,9 @@ export default function ChapterReaderPage() {
       {/* Floating nav bar, fixed at the bottom while reading */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-sm">
         <div className="mx-auto flex max-w-2xl items-stretch justify-between gap-2">
-          {!isFirst ? (
+          {showPrevious ? (
             <Link
-              href={`/module/${moduleNumber}/chapter/${chapterNumber - 1}`}
+              href={previousHref}
               className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl border border-border bg-card px-3 py-2.5 text-center text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
             >
               ← Previous
@@ -172,4 +204,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-            }
+        }
