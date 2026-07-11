@@ -160,7 +160,7 @@ export default function ModulePage() {
               <Link
                 key={chapter.chapter_number}
                 href={`/module/${moduleNumber}/chapter/${chapter.chapter_number}`}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
               >
                 <span
                   className={
