@@ -138,11 +138,11 @@ export default function ChapterReaderPage() {
 
       {/* Floating nav bar, fixed at the bottom while reading */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+        <div className="mx-auto flex max-w-2xl items-stretch justify-between gap-2">
           {!isFirst ? (
             <Link
               href={`/module/${moduleNumber}/chapter/${chapterNumber - 1}`}
-              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-center text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+              className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl border border-border bg-card px-3 py-2.5 text-center text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
             >
               ← Previous
             </Link>
@@ -152,7 +152,7 @@ export default function ChapterReaderPage() {
 
           <Link
             href="/dashboard"
-            className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-center text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+            className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl border border-border bg-card px-3 py-2.5 text-center text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
           >
             Home
           </Link>
@@ -160,7 +160,7 @@ export default function ChapterReaderPage() {
           {!isLast ? (
             <Link
               href={`/module/${moduleNumber}/chapter/${chapterNumber + 1}`}
-              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+              className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-gradient-to-r from-primary to-secondary px-3 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
             >
               Next →
             </Link>
