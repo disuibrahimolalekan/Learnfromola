@@ -144,7 +144,7 @@ export default function ModulePage() {
           {moduleRow.intro_content && (
             <Link
               href={`/module/${moduleNumber}/intro`}
-              className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 shadow-sm transition hover:border-primary/50 hover:shadow-md"
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
             >
               <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
                 📖
