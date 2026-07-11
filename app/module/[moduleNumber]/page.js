@@ -140,15 +140,21 @@ export default function ModulePage() {
           </div>
         </div>
 
-        {/* Module intro — only rendered if this module has one, always in full */}
-        {moduleRow.intro_content && (
-          <div className="markdown-content mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <ReactMarkdown>{moduleRow.intro_content}</ReactMarkdown>
-          </div>
-        )}
-
-        {/* Chapter list */}
+        {/* Chapter list — Introduction (if this module has one) appears first */}
         <div className="mt-8 space-y-3">
+          {moduleRow.intro_content && (
+            <Link
+              href={`/module/${moduleNumber}/intro`}
+              className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 shadow-sm transition hover:border-primary/50 hover:shadow-md"
+            >
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+                📖
+              </span>
+              <span className="text-sm font-semibold text-text-primary">
+                Introduction (Read First)
+              </span>
+            </Link>
+          )}
           {chapters.map((chapter) => {
             const isComplete = completedSet.has(chapter.chapter_number);
             return (
