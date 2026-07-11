@@ -6,6 +6,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { MODULES } from "@/lib/courseStructure";
+import { formatQuotes } from "@/lib/formatContent";
 
 // The stored chapter content still includes the "Chapter Quiz" section
 // (kept in Supabase in case quizzes come back into scope later), but
@@ -110,7 +111,7 @@ export default function ChapterReaderPage() {
   const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
   const isFirst = chapterNumber === 1;
   const isLast = moduleInfo ? chapterNumber === moduleInfo.chapterCount : false;
-  const displayContent = stripQuiz(chapter.content);
+  const displayContent = formatQuotes(stripQuiz(chapter.content));
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -171,4 +172,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-}
+            }
