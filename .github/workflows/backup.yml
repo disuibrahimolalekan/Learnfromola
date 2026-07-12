@@ -18,7 +18,7 @@ jobs:
 
       - name: Dump database
         run: |
-          pg_dump "${SUPABASE_DB_URL}" \
+          /usr/lib/postgresql/17/bin/pg_dump "${SUPABASE_DB_URL}" \
             --no-owner --no-privileges \
             -f supabase_backup_$(date +%Y-%m-%d).sql
         env:
