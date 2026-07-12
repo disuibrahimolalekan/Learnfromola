@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-const COURSE_PRODUCT_CODE = "8713g4z88e";
+// This is the one Selar product code this deployed site currently sells.
+// When admin.learnfromola.online supports adding new courses with their own
+// product codes, this can become dynamic (e.g. based on subdomain); for now,
+// course.learnfromola.online is a single-course site.
+const COURSE_SLUG = "ai-software-builder";
 
 export async function POST(request) {
   const body = await request.json().catch(() => null);
@@ -11,11 +15,22 @@ export async function POST(request) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
+  const { data: course, error: courseError } = await supabaseAdmin
+    .from("courses")
+    .select("id")
+    .eq("slug", COURSE_SLUG)
+    .maybeSingle();
+
+  if (courseError || !course) {
+    console.error("check-purchase: course lookup failed:", courseError?.message);
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("purchases")
     .select("id")
     .eq("email", email)
-    .eq("product_code", COURSE_PRODUCT_CODE)
+    .eq("course_id", course.id)
     .limit(1);
 
   if (error) {
@@ -24,4 +39,4 @@ export async function POST(request) {
   }
 
   return NextResponse.json({ purchased: Boolean(data && data.length > 0) });
-}
+                  }
