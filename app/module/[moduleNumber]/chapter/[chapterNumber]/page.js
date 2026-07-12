@@ -7,12 +7,9 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { MODULES } from "@/lib/courseStructure";
 import { formatQuotes } from "@/lib/formatContent";
+import { getCurrentCourseId } from "@/lib/currentCourse";
 import FlowChart from "@/components/ui/FlowChart";
 
-// The stored chapter content still includes the "Chapter Quiz" section
-// (kept in Supabase in case quizzes come back into scope later), but
-// quizzes are currently out of scope, so we cut the content off there
-// before rendering.
 function stripQuiz(content) {
   const marker = content.indexOf("### Chapter Quiz");
   if (marker === -1) return content;
@@ -41,16 +38,25 @@ export default function ChapterReaderPage() {
         return;
       }
 
+      const courseId = await getCurrentCourseId();
+      if (!courseId) {
+        setNotFound(true);
+        setChecking(false);
+        return;
+      }
+
       const [chapterResult, moduleResult] = await Promise.all([
         supabase
           .from("chapters")
-          .select("chapter_number, title, content")
+          .select("chapter_number, title, content, video_url")
+          .eq("course_id", courseId)
           .eq("module_number", moduleNumber)
           .eq("chapter_number", chapterNumber)
           .maybeSingle(),
         supabase
           .from("modules")
           .select("intro_content")
+          .eq("course_id", courseId)
           .eq("number", moduleNumber)
           .maybeSingle(),
       ]);
@@ -72,8 +78,6 @@ export default function ChapterReaderPage() {
       setModuleHasIntro(Boolean(moduleResult.data?.intro_content));
       setChecking(false);
 
-      // Mark this chapter as complete the moment it's opened. Check first
-      // so we don't insert duplicate rows every time the student revisits.
       const { data: existing } = await supabase
         .from("progress")
         .select("chapter_number")
@@ -124,7 +128,6 @@ export default function ChapterReaderPage() {
   const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
   const isFirst = chapterNumber === 1;
   const isLast = moduleInfo ? chapterNumber === moduleInfo.chapterCount : false;
-  // Chapter 1 shows Previous only if this module has an intro to go back to.
   const showPrevious = !isFirst || (isFirst && moduleHasIntro);
   const previousHref = isFirst
     ? `/module/${moduleNumber}/intro`
@@ -164,12 +167,24 @@ export default function ChapterReaderPage() {
           />
         )}
 
+        {chapter.video_url && (
+          <div className="mt-6 overflow-hidden rounded-2xl border border-border shadow-sm">
+            <div className="aspect-video w-full">
+              <iframe
+                src={chapter.video_url}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+
         <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <ReactMarkdown>{displayContent}</ReactMarkdown>
         </div>
       </div>
 
-      {/* Floating nav bar, fixed at the bottom while reading */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-sm">
         <div className="mx-auto flex max-w-2xl items-stretch justify-between gap-2">
           {showPrevious ? (
@@ -204,4 +219,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-        }
+}
