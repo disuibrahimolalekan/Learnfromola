@@ -58,6 +58,7 @@ export async function POST(request) {
   console.log("Selar webhook payload:", JSON.stringify(body));
 
   const email = extractBuyerEmail(body);
+  const productCode = extractProductCode(body);
 
   if (!email) {
     console.warn("Selar webhook: could not find a buyer email in payload.");
@@ -67,11 +68,46 @@ export async function POST(request) {
     );
   }
 
+  if (!productCode) {
+    console.warn("Selar webhook: no product_code found in payload.");
+    return NextResponse.json(
+      { error: "No product_code found in payload", received: body },
+      { status: 200 }
+    );
+  }
+
+  // Every purchase now has to belong to a specific course. Look up which
+  // course this product code maps to instead of assuming there's only one.
+  const { data: course, error: courseError } = await supabaseAdmin
+    .from("courses")
+    .select("id, name")
+    .eq("selar_product_code", productCode)
+    .maybeSingle();
+
+  if (courseError) {
+    console.error("Failed to look up course:", courseError.message);
+    return NextResponse.json({ error: courseError.message }, { status: 500 });
+  }
+
+  if (!course) {
+    // A sale came in for a product code that isn't registered to any course
+    // yet. Log it clearly so it's never silently lost, but don't insert a
+    // broken purchase row.
+    console.warn(
+      `Selar webhook: no course found for product_code "${productCode}". Purchase not recorded.`
+    );
+    return NextResponse.json(
+      { error: `No course matches product_code ${productCode}`, received: body },
+      { status: 200 }
+    );
+  }
+
   const { error } = await supabaseAdmin.from("purchases").insert({
     email: email.trim().toLowerCase(),
     full_name: extractBuyerName(body),
     selar_order_id: extractOrderId(body),
-    product_code: extractProductCode(body),
+    product_code: productCode,
+    course_id: course.id,
   });
 
   if (error) {
@@ -79,5 +115,6 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  console.log(`Purchase recorded for course "${course.name}" (${email})`);
   return NextResponse.json({ received: true }, { status: 200 });
 }
