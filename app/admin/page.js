@@ -200,11 +200,18 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <p className="text-sm text-text-secondary">
-            Login and access control are working. Content editing and student
-            monitoring screens are coming next.
-          </p>
+        <div className="mt-8 space-y-3">
+          <a
+            href="/admin/modules"
+            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+          >
+            <h2 className="font-display text-base font-semibold text-text-primary">
+              Manage Content
+            </h2>
+            <p className="mt-1 text-xs text-text-secondary">
+              Edit module intros, chapters, and video links
+            </p>
+          </a>
         </div>
       </div>
     </div>
