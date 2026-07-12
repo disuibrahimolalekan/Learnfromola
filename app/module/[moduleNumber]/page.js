@@ -5,13 +5,14 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { MODULES } from "@/lib/courseStructure";
+import { getCurrentCourseId } from "@/lib/currentCourse";
 import ProgressBar from "@/components/ui/ProgressBar";
 
 export default function ModulePage() {
   const router = useRouter();
   const params = useParams();
   const moduleNumber = Number(params.moduleNumber);
-  
+
   const [checking, setChecking] = useState(true);
   const [moduleRow, setModuleRow] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -29,11 +30,15 @@ export default function ModulePage() {
         return;
       }
 
-      // moduleInfo comes from the local course structure (chapter counts,
-      // titles for the dashboard); moduleRow/chapters come from Supabase
-      // (the real, editable content).
       const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
       if (!moduleInfo) {
+        setNotFound(true);
+        setChecking(false);
+        return;
+      }
+
+      const courseId = await getCurrentCourseId();
+      if (!courseId) {
         setNotFound(true);
         setChecking(false);
         return;
@@ -43,11 +48,13 @@ export default function ModulePage() {
         supabase
           .from("modules")
           .select("number, title, intro_content")
+          .eq("course_id", courseId)
           .eq("number", moduleNumber)
           .maybeSingle(),
         supabase
           .from("chapters")
           .select("chapter_number, title")
+          .eq("course_id", courseId)
           .eq("module_number", moduleNumber)
           .order("chapter_number", { ascending: true }),
         supabase
@@ -139,7 +146,6 @@ export default function ModulePage() {
           </div>
         </div>
 
-        {/* Chapter list — Introduction (if this module has one) appears first */}
         <div className="mt-8 space-y-3">
           {moduleRow.intro_content && (
             <Link
@@ -154,6 +160,7 @@ export default function ModulePage() {
               </span>
             </Link>
           )}
+
           {chapters.map((chapter) => {
             const isComplete = completedSet.has(chapter.chapter_number);
             return (
@@ -181,4 +188,4 @@ export default function ModulePage() {
       </div>
     </div>
   );
-      }
+}
