@@ -1,13 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
-  const [adminEmail, setAdminEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     async function verifyAdmin() {
@@ -32,16 +41,57 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      setAdminEmail(session.user.email);
+      setFullName(
+        session.user.user_metadata?.full_name || session.user.email.split("@")[0]
+      );
       setChecking(false);
     }
 
     verifyAdmin();
   }, [router]);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+        setShowResetForm(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   async function handleLogout() {
     await supabase.auth.signOut();
     router.replace("/login");
+  }
+
+  async function handlePasswordReset(e) {
+    e.preventDefault();
+    setResetError("");
+    setResetSuccess(false);
+
+    if (newPassword.length < 8) {
+      setResetError("Password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError("Passwords do not match.");
+      return;
+    }
+
+    setResetSubmitting(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setResetSubmitting(false);
+
+    if (error) {
+      setResetError(error.message);
+      return;
+    }
+
+    setResetSuccess(true);
+    setNewPassword("");
+    setConfirmPassword("");
   }
 
   if (checking) {
@@ -53,23 +103,101 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-bg pb-16">
       <div className="mx-auto max-w-2xl px-6 py-10">
-        <div className="flex items-center justify-between">
-          <div>
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <span className="text-xs font-semibold uppercase tracking-wide text-primary">
               Admin Dashboard
             </span>
-            <h1 className="mt-1 font-display text-2xl font-bold text-text-primary">
-              Welcome, {adminEmail}
+            <h1 className="mt-1 truncate font-display text-2xl font-bold text-text-primary">
+              Welcome, {fullName}
             </h1>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
-          >
-            Sign Out
-          </button>
+
+          {/* Account menu */}
+          <div className="relative flex-shrink-0" ref={menuRef}>
+            <button
+              onClick={() => {
+                setMenuOpen((open) => !open);
+                setShowResetForm(false);
+                setResetError("");
+                setResetSuccess(false);
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              aria-label="Account menu"
+            >
+              {fullName.charAt(0).toUpperCase()}
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-12 z-10 w-64 rounded-2xl border border-border bg-card p-2 shadow-md">
+                {!showResetForm ? (
+                  <>
+                    <button
+                      onClick={() => setShowResetForm(true)}
+                      className="block w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+                    >
+                      Reset Password
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <form onSubmit={handlePasswordReset} className="p-2">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">
+                      Set a new password
+                    </p>
+                    <input
+                      type="password"
+                      placeholder="New password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    />
+
+                    {resetError && (
+                      <p className="mb-2 text-xs text-red-600">{resetError}</p>
+                    )}
+                    {resetSuccess && (
+                      <p className="mb-2 text-xs font-medium text-emerald-600">
+                        Password updated successfully.
+                      </p>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={resetSubmitting}
+                        className="flex-1 rounded-lg bg-gradient-to-r from-primary to-secondary px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                      >
+                        {resetSubmitting ? "Saving…" : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowResetForm(false)}
+                        className="flex-1 rounded-lg border border-border px-3 py-2 text-xs font-medium text-text-primary"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -81,4 +209,4 @@ export default function AdminDashboardPage() {
       </div>
     </div>
   );
-    }
+                                                       }
