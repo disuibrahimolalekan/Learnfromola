@@ -6,6 +6,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { formatQuotes } from "@/lib/formatContent";
+import { getCurrentCourseId } from "@/lib/currentCourse";
 
 export default function ModuleIntroPage() {
   const router = useRouter();
@@ -26,9 +27,16 @@ export default function ModuleIntroPage() {
         return;
       }
 
+      const courseId = await getCurrentCourseId();
+      if (!courseId) {
+        setChecking(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("modules")
         .select("number, title, intro_content")
+        .eq("course_id", courseId)
         .eq("number", moduleNumber)
         .maybeSingle();
 
@@ -82,7 +90,6 @@ export default function ModuleIntroPage() {
         </div>
       </div>
 
-      {/* Floating nav bar — intro is always first, so only Home and Next appear */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-sm">
         <div className="mx-auto flex max-w-2xl items-stretch justify-between gap-2">
           <Link
@@ -102,4 +109,4 @@ export default function ModuleIntroPage() {
       </div>
     </div>
   );
-        }
+}
