@@ -225,3 +225,7 @@ export default function AdminDashboardPage() {
             </p>
           </a>
         </div>
+      </div>
+    </div>
+  );
+}
