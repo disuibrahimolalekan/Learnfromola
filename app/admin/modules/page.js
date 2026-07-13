@@ -36,17 +36,25 @@ export default function AdminModulesPage() {
       const cId = await getCurrentCourseId();
       setCourseId(cId);
 
-      const { data } = await supabase
-        .from("modules")
-        .select("number, title, chapters(count)")
-        .eq("course_id", cId)
-        .order("number", { ascending: true });
+      const [modulesResult, chaptersResult] = await Promise.all([
+        supabase
+          .from("modules")
+          .select("number, title")
+          .eq("course_id", cId)
+          .order("number", { ascending: true }),
+        supabase.from("chapters").select("module_number").eq("course_id", cId),
+      ]);
+
+      const countByModule = {};
+      (chaptersResult.data || []).forEach((row) => {
+        countByModule[row.module_number] = (countByModule[row.module_number] || 0) + 1;
+      });
 
       setModules(
-        (data || []).map((m) => ({
+        (modulesResult.data || []).map((m) => ({
           number: m.number,
           title: m.title,
-          chapterCount: m.chapters?.[0]?.count || 0,
+          chapterCount: countByModule[m.number] || 0,
         }))
       );
       setChecking(false);
