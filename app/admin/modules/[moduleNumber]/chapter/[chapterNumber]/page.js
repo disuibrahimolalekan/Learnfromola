@@ -18,6 +18,7 @@ export default function AdminChapterEditPage() {
   const [videoUrl, setVideoUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const contentTextareaRef = useRef(null);
 
   useEffect(() => {
@@ -65,6 +66,28 @@ export default function AdminChapterEditPage() {
       .eq("chapter_number", chapterNumber);
     setSaving(false);
     setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
+  }
+
+  async function handleDeleteChapter() {
+    const confirmed = window.confirm(
+      `Delete Chapter ${chapterNumber} — "${title}"?\n\nThis cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    const { error } = await supabase
+      .from("chapters")
+      .delete()
+      .eq("module_number", moduleNumber)
+      .eq("chapter_number", chapterNumber);
+    setDeleting(false);
+
+    if (error) {
+      alert(`Failed to delete chapter: ${error.message}`);
+      return;
+    }
+
+    router.replace(`/admin/modules/${moduleNumber}`);
   }
 
   if (checking) {
@@ -136,7 +159,23 @@ export default function AdminChapterEditPage() {
             <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
           )}
         </div>
+
+        <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5">
+          <h3 className="font-display text-sm font-semibold text-red-800">
+            Danger Zone
+          </h3>
+          <p className="mt-1 text-xs text-red-700">
+            This permanently deletes this chapter. This cannot be undone.
+          </p>
+          <button
+            onClick={handleDeleteChapter}
+            disabled={deleting}
+            className="mt-3 w-full rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+          >
+            {deleting ? "Deleting…" : "Delete This Chapter"}
+          </button>
+        </div>
       </div>
     </div>
   );
-                                        }
+              }
