@@ -168,9 +168,56 @@ export default function AdminModuleEditPage() {
           )}
         </div>
 
-        <h2 className="mt-8 font-display text-lg font-semibold text-text-primary">
-          Chapters
-        </h2>
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold text-text-primary">
+            Chapters
+          </h2>
+          <button
+            onClick={async () => {
+              const chapterTitle = window.prompt("Title for the new chapter:");
+              if (!chapterTitle || !chapterTitle.trim()) return;
+
+              const { data: moduleData } = await supabase
+                .from("modules")
+                .select("id, course_id")
+                .eq("number", moduleNumber)
+                .maybeSingle();
+
+              if (!moduleData) {
+                alert("Could not find this module.");
+                return;
+              }
+
+              const nextChapterNumber =
+                chapters.length > 0
+                  ? Math.max(...chapters.map((c) => c.chapter_number)) + 1
+                  : 1;
+
+              const { error } = await supabase.from("chapters").insert({
+                course_id: moduleData.course_id,
+                module_id: moduleData.id,
+                module_number: moduleNumber,
+                chapter_number: nextChapterNumber,
+                title: chapterTitle.trim(),
+                content: "",
+                video_url: null,
+              });
+
+              if (error) {
+                alert(`Failed to create chapter: ${error.message}`);
+                return;
+              }
+
+              setChapters((prev) => [
+                ...prev,
+                { chapter_number: nextChapterNumber, title: chapterTitle.trim() },
+              ]);
+            }}
+            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-xs font-semibold text-white shadow-sm"
+          >
+            + New Chapter
+          </button>
+        </div>
         <div className="mt-3 space-y-3">
           {chapters.map((ch) => (
             <Link
