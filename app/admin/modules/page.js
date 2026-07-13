@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { MODULES } from "@/lib/courseStructure";
+import { getCurrentCourseId } from "@/lib/currentCourse";
 
 export default function AdminModulesPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [modules, setModules] = useState([]);
+  const [courseId, setCourseId] = useState(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    async function verify() {
+    async function load() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -29,10 +32,51 @@ export default function AdminModulesPage() {
         router.replace("/login");
         return;
       }
+
+      const cId = await getCurrentCourseId();
+      setCourseId(cId);
+
+      const { data } = await supabase
+        .from("modules")
+        .select("number, title, chapters(count)")
+        .eq("course_id", cId)
+        .order("number", { ascending: true });
+
+      setModules(
+        (data || []).map((m) => ({
+          number: m.number,
+          title: m.title,
+          chapterCount: m.chapters?.[0]?.count || 0,
+        }))
+      );
       setChecking(false);
     }
-    verify();
+    load();
   }, [router]);
+
+  async function handleAddModule() {
+    const title = window.prompt("Title for the new module:");
+    if (!title || !title.trim()) return;
+
+    setCreating(true);
+    const nextNumber =
+      modules.length > 0 ? Math.max(...modules.map((m) => m.number)) + 1 : 1;
+
+    const { error } = await supabase.from("modules").insert({
+      course_id: courseId,
+      number: nextNumber,
+      title: title.trim(),
+      intro_content: null,
+    });
+    setCreating(false);
+
+    if (error) {
+      alert(`Failed to create module: ${error.message}`);
+      return;
+    }
+
+    setModules((prev) => [...prev, { number: nextNumber, title: title.trim(), chapterCount: 0 }]);
+  }
 
   if (checking) {
     return (
@@ -49,15 +93,26 @@ export default function AdminModulesPage() {
           ← Admin Dashboard
         </Link>
 
-        <h1 className="mt-4 font-display text-2xl font-bold text-text-primary">
-          Manage Content
-        </h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Select a module to edit its intro or chapters.
-        </p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-text-primary">
+              Manage Content
+            </h1>
+            <p className="mt-1 text-sm text-text-secondary">
+              Select a module to edit its intro or chapters.
+            </p>
+          </div>
+          <button
+            onClick={handleAddModule}
+            disabled={creating}
+            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+          >
+            {creating ? "Adding…" : "+ New Module"}
+          </button>
+        </div>
 
         <div className="mt-6 space-y-3">
-          {MODULES.map((mod) => (
+          {modules.map((mod) => (
             <Link
               key={mod.number}
               href={`/admin/modules/${mod.number}`}
@@ -78,4 +133,4 @@ export default function AdminModulesPage() {
       </div>
     </div>
   );
-    }
+}
