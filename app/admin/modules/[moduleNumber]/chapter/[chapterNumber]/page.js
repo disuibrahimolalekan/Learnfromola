@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
 
 export default function AdminChapterEditPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function AdminChapterEditPage() {
   const [videoUrl, setVideoUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const contentTextareaRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -108,9 +110,15 @@ export default function AdminChapterEditPage() {
           />
 
           <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
-            Chapter Content (Markdown)
+            Chapter Content
           </label>
+          <MarkdownToolbar
+            textareaRef={contentTextareaRef}
+            value={content}
+            onChange={setContent}
+          />
           <textarea
+            ref={contentTextareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={20}
@@ -131,4 +139,4 @@ export default function AdminChapterEditPage() {
       </div>
     </div>
   );
-}
+                                        }
