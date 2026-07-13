@@ -5,7 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
-import { MODULES } from "@/lib/courseStructure";
 import { formatQuotes } from "@/lib/formatContent";
 import { getCurrentCourseId } from "@/lib/currentCourse";
 import FlowChart from "@/components/ui/FlowChart";
@@ -25,6 +24,7 @@ export default function ChapterReaderPage() {
   const [checking, setChecking] = useState(true);
   const [chapter, setChapter] = useState(null);
   const [moduleHasIntro, setModuleHasIntro] = useState(false);
+  const [siblingChapterNumbers, setSiblingChapterNumbers] = useState([]);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function ChapterReaderPage() {
         return;
       }
 
-      const [chapterResult, moduleResult] = await Promise.all([
+      const [chapterResult, moduleResult, siblingsResult] = await Promise.all([
         supabase
           .from("chapters")
           .select("chapter_number, title, content, video_url")
@@ -59,14 +59,13 @@ export default function ChapterReaderPage() {
           .eq("course_id", courseId)
           .eq("number", moduleNumber)
           .maybeSingle(),
+        supabase
+          .from("chapters")
+          .select("chapter_number")
+          .eq("course_id", courseId)
+          .eq("module_number", moduleNumber)
+          .order("chapter_number", { ascending: true }),
       ]);
-
-      if (chapterResult.error) {
-        console.error("Failed to load chapter:", chapterResult.error.message);
-      }
-      if (moduleResult.error) {
-        console.error("Failed to load module:", moduleResult.error.message);
-      }
 
       if (!chapterResult.data) {
         setNotFound(true);
@@ -76,6 +75,9 @@ export default function ChapterReaderPage() {
 
       setChapter(chapterResult.data);
       setModuleHasIntro(Boolean(moduleResult.data?.intro_content));
+      setSiblingChapterNumbers(
+        (siblingsResult.data || []).map((c) => c.chapter_number)
+      );
       setChecking(false);
 
       const { data: existing } = await supabase
@@ -125,13 +127,25 @@ export default function ChapterReaderPage() {
     );
   }
 
-  const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
-  const isFirst = chapterNumber === 1;
-  const isLast = moduleInfo ? chapterNumber === moduleInfo.chapterCount : false;
+  // Determine true first/last and previous/next based on the actual
+  // chapters that exist, not assumed sequential numbering — this stays
+  // correct even if a chapter in the middle has been deleted.
+  const currentIndex = siblingChapterNumbers.indexOf(chapterNumber);
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === siblingChapterNumbers.length - 1;
+  const previousChapterNumber =
+    currentIndex > 0 ? siblingChapterNumbers[currentIndex - 1] : null;
+  const nextChapterNumber =
+    currentIndex < siblingChapterNumbers.length - 1
+      ? siblingChapterNumbers[currentIndex + 1]
+      : null;
+
   const showPrevious = !isFirst || (isFirst && moduleHasIntro);
-  const previousHref = isFirst
-    ? `/module/${moduleNumber}/intro`
-    : `/module/${moduleNumber}/chapter/${chapterNumber - 1}`;
+  const previousHref =
+    isFirst && moduleHasIntro
+      ? `/module/${moduleNumber}/intro`
+      : `/module/${moduleNumber}/chapter/${previousChapterNumber}`;
+
   const displayContent = formatQuotes(stripQuiz(chapter.content));
 
   return (
@@ -207,7 +221,7 @@ export default function ChapterReaderPage() {
 
           {!isLast ? (
             <Link
-              href={`/module/${moduleNumber}/chapter/${chapterNumber + 1}`}
+              href={`/module/${moduleNumber}/chapter/${nextChapterNumber}`}
               className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-gradient-to-r from-primary to-secondary px-3 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
             >
               Next →
@@ -219,4 +233,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-}
+                }
