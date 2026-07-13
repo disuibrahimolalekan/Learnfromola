@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
+import { formatQuotes } from "@/lib/formatContent";
 
 export default function ChecklistPage() {
   const router = useRouter();
@@ -58,9 +59,14 @@ export default function ChecklistPage() {
         </Link>
 
         {page ? (
-          <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <ReactMarkdown>{page.content}</ReactMarkdown>
-          </div>
+          <>
+            <h1 className="mt-4 font-display text-2xl font-bold text-text-primary">
+              {page.title}
+            </h1>
+            <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <ReactMarkdown>{formatQuotes(page.content)}</ReactMarkdown>
+            </div>
+          </>
         ) : (
           <p className="mt-6 text-sm text-text-secondary">
             We couldn&apos;t load the checklist right now.
@@ -69,4 +75,4 @@ export default function ChecklistPage() {
       </div>
     </div>
   );
-            }
+}
