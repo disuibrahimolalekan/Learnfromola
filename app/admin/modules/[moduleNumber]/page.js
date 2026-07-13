@@ -17,6 +17,7 @@ export default function AdminModuleEditPage() {
   const [chapters, setChapters] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const introTextareaRef = useRef(null);
 
   useEffect(() => {
@@ -69,6 +70,41 @@ export default function AdminModuleEditPage() {
       .eq("number", moduleNumber);
     setSaving(false);
     setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
+  }
+
+  async function handleDeleteModule() {
+    const confirmed = window.confirm(
+      `Delete Module ${moduleNumber} — "${title}"?\n\nThis will permanently delete this module AND all ${chapters.length} of its chapters. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+
+    // Delete chapters first, then the module itself.
+    const { error: chaptersError } = await supabase
+      .from("chapters")
+      .delete()
+      .eq("module_number", moduleNumber);
+
+    if (chaptersError) {
+      setDeleting(false);
+      alert(`Failed to delete chapters: ${chaptersError.message}`);
+      return;
+    }
+
+    const { error: moduleError } = await supabase
+      .from("modules")
+      .delete()
+      .eq("number", moduleNumber);
+
+    setDeleting(false);
+
+    if (moduleError) {
+      alert(`Failed to delete module: ${moduleError.message}`);
+      return;
+    }
+
+    router.replace("/admin/modules");
   }
 
   if (checking) {
@@ -151,7 +187,24 @@ export default function AdminModuleEditPage() {
             </Link>
           ))}
         </div>
+
+        <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5">
+          <h3 className="font-display text-sm font-semibold text-red-800">
+            Danger Zone
+          </h3>
+          <p className="mt-1 text-xs text-red-700">
+            Deleting this module also deletes all {chapters.length} of its
+            chapters. This cannot be undone.
+          </p>
+          <button
+            onClick={handleDeleteModule}
+            disabled={deleting}
+            className="mt-3 w-full rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+          >
+            {deleting ? "Deleting…" : "Delete This Module"}
+          </button>
+        </div>
       </div>
     </div>
   );
-}
+          }
