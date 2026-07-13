@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { MODULES } from "@/lib/courseStructure";
 import { getCurrentCourseId } from "@/lib/currentCourse";
 import ProgressBar from "@/components/ui/ProgressBar";
 
@@ -27,13 +26,6 @@ export default function ModulePage() {
 
       if (!session) {
         router.replace("/login");
-        return;
-      }
-
-      const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
-      if (!moduleInfo) {
-        setNotFound(true);
-        setChecking(false);
         return;
       }
 
@@ -64,14 +56,10 @@ export default function ModulePage() {
           .eq("module_number", moduleNumber),
       ]);
 
-      if (moduleResult.error) {
-        console.error("Failed to load module:", moduleResult.error.message);
-      }
-      if (chaptersResult.error) {
-        console.error("Failed to load chapters:", chaptersResult.error.message);
-      }
-      if (progressResult.error) {
-        console.error("Failed to load progress:", progressResult.error.message);
+      if (!moduleResult.data) {
+        setNotFound(true);
+        setChecking(false);
+        return;
       }
 
       setModuleRow(moduleResult.data);
@@ -109,10 +97,9 @@ export default function ModulePage() {
     );
   }
 
-  const moduleInfo = MODULES.find((m) => m.number === moduleNumber);
   const percent =
-    moduleInfo.chapterCount > 0
-      ? Math.round((completedSet.size / moduleInfo.chapterCount) * 100)
+    chapters.length > 0
+      ? Math.round((completedSet.size / chapters.length) * 100)
       : 0;
 
   return (
@@ -137,7 +124,7 @@ export default function ModulePage() {
             <div className="flex items-baseline justify-between text-sm">
               <span className="font-medium text-text-primary">Progress</span>
               <span className="text-text-secondary">
-                {completedSet.size}/{moduleInfo.chapterCount} chapters
+                {completedSet.size}/{chapters.length} chapters
               </span>
             </div>
             <div className="mt-2">
@@ -188,4 +175,4 @@ export default function ModulePage() {
       </div>
     </div>
   );
-}
+                    }
