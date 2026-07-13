@@ -212,8 +212,16 @@ export default function AdminDashboardPage() {
               Edit module intros, chapters, and video links
             </p>
           </a>
+
+          <a
+            href="/admin/pages/checklist"
+            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+          >
+            <h2 className="font-display text-base font-semibold text-text-primary">
+              Edit Checklist Page
+            </h2>
+            <p className="mt-1 text-xs text-text-secondary">
+              Rename or edit the Security & Deployment Checklist
+            </p>
+          </a>
         </div>
-      </div>
-    </div>
-  );
-                                                       }
