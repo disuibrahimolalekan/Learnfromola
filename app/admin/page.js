@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [fullName, setFullName] = useState("");
+  const [courses, setCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
@@ -49,6 +52,24 @@ export default function AdminDashboardPage() {
 
     verifyAdmin();
   }, [router]);
+
+  // Loaded separately from the admin-gate check above so the course grid
+  // can be re-fetched independently (e.g. right after adding a course).
+  useEffect(() => {
+    async function loadCourses() {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, name")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Failed to load courses:", error.message);
+      }
+      setCourses(data || []);
+      setLoadingCourses(false);
+    }
+    loadCourses();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -200,20 +221,47 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="mt-8 space-y-3">
-          <a
-            href="/admin/modules"
-            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+        {/* Courses */}
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold text-text-primary">
+            Courses
+          </h2>
+          <Link
+            href="/admin/courses/new"
+            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-xs font-semibold text-white shadow-sm"
           >
-            <h2 className="font-display text-base font-semibold text-text-primary">
-              Manage Content
-            </h2>
-            <p className="mt-1 text-xs text-text-secondary">
-              Edit module intros, chapters, and video links
-            </p>
-          </a>
+            + Add Course
+          </Link>
+        </div>
 
-          <a
+        <div className="mt-3 space-y-3">
+          {loadingCourses ? (
+            <p className="text-sm text-text-secondary">Loading courses…</p>
+          ) : courses.length === 0 ? (
+            <p className="text-sm text-text-secondary">
+              No courses yet. Tap &quot;+ Add Course&quot; to create your first one.
+            </p>
+          ) : (
+            courses.map((course) => (
+              <Link
+                key={course.id}
+                href={`/admin/courses/${course.id}/modules`}
+                className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+              >
+                <h3 className="font-display text-base font-semibold text-text-primary">
+                  {course.name}
+                </h3>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Manage modules and chapters
+                </p>
+              </Link>
+            ))
+          )}
+        </div>
+
+        {/* Other admin tools */}
+        <div className="mt-8 space-y-3">
+          <Link
             href="/admin/pages/checklist"
             className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
           >
@@ -221,11 +269,11 @@ export default function AdminDashboardPage() {
               Edit Checklist Page
             </h2>
             <p className="mt-1 text-xs text-text-secondary">
-              Rename or edit the Security & Deployment Checklist
+              Rename or edit the Security &amp; Deployment Checklist
             </p>
-          </a>
+          </Link>
         </div>
       </div>
     </div>
   );
-}
+                  }
