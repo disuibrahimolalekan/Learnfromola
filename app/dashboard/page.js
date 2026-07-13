@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(true);
   const [fullName, setFullName] = useState("");
   const [completedByModule, setCompletedByModule] = useState({});
+  const [checklistTitle, setChecklistTitle] = useState("Security & Deployment Checklist");
 
   // Account menu state
   const [menuOpen, setMenuOpen] = useState(false);
@@ -52,6 +53,14 @@ export default function DashboardPage() {
         byModule[row.module_number] = set;
       });
       setCompletedByModule(byModule);
+
+      const { data: checklistPage } = await supabase
+        .from("pages")
+        .select("title")
+        .eq("slug", "checklist")
+        .maybeSingle();
+      setChecklistTitle(checklistPage?.title || "Security & Deployment Checklist");
+
       setChecking(false);
     }
 
@@ -282,7 +291,7 @@ export default function DashboardPage() {
               <Link
                 key={mod.number}
                 href={`/module/${mod.number}`}
-                className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -305,13 +314,13 @@ export default function DashboardPage() {
           {/* Checklist — reference content, not a course module, so no progress bar */}
           <Link
             href="/checklist"
-            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-primary">
               Reference
             </span>
             <h2 className="mt-1 font-display text-base font-semibold text-text-primary">
-              Security & Deployment Checklist
+              {checklistTitle}
             </h2>
             <p className="mt-1 text-xs text-text-secondary">
               Review before and after deploying your projects
@@ -376,4 +385,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-                        }
+}
