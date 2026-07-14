@@ -257,21 +257,20 @@ export default function AdminDashboardPage() {
               </Link>
             ))
           )}
-        </div>
 
-        {/* Other admin tools */}
-        <div className="mt-8 space-y-3">
-          <Link
-            href="/admin/pages/checklist"
-            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
-          >
-            <h2 className="font-display text-base font-semibold text-text-primary">
-              Edit Checklist Page
-            </h2>
-            <p className="mt-1 text-xs text-text-secondary">
-              Rename or edit the Security &amp; Deployment Checklist
-            </p>
-          </Link>
+          {!loadingCourses && (
+            <Link
+              href="/admin/pages/checklist"
+              className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+            >
+              <h3 className="font-display text-base font-semibold text-text-primary">
+                Edit Checklist Page
+              </h3>
+              <p className="mt-1 text-xs text-text-secondary">
+                Rename or edit the Security &amp; Deployment Checklist
+              </p>
+            </Link>
+          )}
         </div>
       </div>
     </div>
