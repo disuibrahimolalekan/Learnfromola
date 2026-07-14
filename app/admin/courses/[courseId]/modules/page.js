@@ -99,8 +99,8 @@ export default function AdminModulesPage() {
   return (
     <div className="min-h-screen bg-bg pb-16">
       <div className="mx-auto max-w-2xl px-6 py-10">
-        <Link href="/admin" className="text-sm font-medium text-primary hover:underline">
-          ← All Courses
+        <Link href={`/admin/courses/${courseId}`} className="text-sm font-medium text-primary hover:underline">
+          ← {courseName}
         </Link>
 
         <div className="mt-4 flex items-center justify-between gap-3">
@@ -142,8 +142,25 @@ export default function AdminModulesPage() {
               </p>
             </Link>
           ))}
+
+          {/* Checklist lives here as the final item after all modules,
+              not as a standalone admin link outside the course. */}
+          <Link
+            href={`/admin/courses/${courseId}/checklist`}
+            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-accent">
+              Final Item
+            </span>
+            <h2 className="mt-1 font-display text-base font-semibold text-text-primary">
+              Checklist
+            </h2>
+            <p className="mt-1 text-xs text-text-secondary">
+              Security &amp; Deployment Checklist page
+            </p>
+          </Link>
         </div>
       </div>
     </div>
   );
-}
+                }
