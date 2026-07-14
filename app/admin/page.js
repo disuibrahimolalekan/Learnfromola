@@ -53,8 +53,6 @@ export default function AdminDashboardPage() {
     verifyAdmin();
   }, [router]);
 
-  // Loaded separately from the admin-gate check above so the course grid
-  // can be re-fetched independently (e.g. right after adding a course).
   useEffect(() => {
     async function loadCourses() {
       const { data, error } = await supabase
@@ -245,35 +243,20 @@ export default function AdminDashboardPage() {
             courses.map((course) => (
               <Link
                 key={course.id}
-                href={`/admin/courses/${course.id}/modules`}
+                href={`/admin/courses/${course.id}`}
                 className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
               >
                 <h3 className="font-display text-base font-semibold text-text-primary">
                   {course.name}
                 </h3>
                 <p className="mt-1 text-xs text-text-secondary">
-                  Manage modules and chapters
+                  Manage content and students
                 </p>
               </Link>
             ))
           )}
         </div>
-
-        {/* Other admin tools */}
-        <div className="mt-8 space-y-3">
-          <Link
-            href="/admin/pages/checklist"
-            className="block rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
-          >
-            <h2 className="font-display text-base font-semibold text-text-primary">
-              Edit Checklist Page
-            </h2>
-            <p className="mt-1 text-xs text-text-secondary">
-              Rename or edit the Security &amp; Deployment Checklist
-            </p>
-          </Link>
-        </div>
       </div>
     </div>
   );
-                  }
+                        }
