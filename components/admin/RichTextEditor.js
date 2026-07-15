@@ -21,6 +21,7 @@ export default function RichTextEditor({ value, onChange }) {
   const [dialogUrl, setDialogUrl] = useState("");
   const [linkSelection, setLinkSelection] = useState(null);
   const [resolvingImage, setResolvingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -92,15 +93,27 @@ export default function RichTextEditor({ value, onChange }) {
     const rawUrl = normalizeUrl(dialogUrl);
 
     setResolvingImage(true);
+    setImageError("");
+
     let finalUrl = rawUrl;
+    let resolved = true;
     try {
       const res = await fetch(`/api/resolve-image-url?url=${encodeURIComponent(rawUrl)}`);
       const data = await res.json();
       if (data?.url) finalUrl = data.url;
+      resolved = data?.resolved !== false;
     } catch (e) {
-      console.error("Failed to resolve image URL:", e);
+      resolved = false;
     }
+
     setResolvingImage(false);
+
+    if (!resolved) {
+      setImageError(
+        "Couldn't read that link automatically. On the ImgBB page, tap your image, then copy the link labeled \"Direct link\" (starts with i.ibb.co) and paste that instead."
+      );
+      return;
+    }
 
     editor.chain().focus().setImage({ src: finalUrl }).run();
     setDialogUrl("");
@@ -154,6 +167,7 @@ export default function RichTextEditor({ value, onChange }) {
           title="Image"
           onClick={() => {
             setDialogUrl("");
+            setImageError("");
             setImageDialogOpen(true);
           }}
           className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
@@ -244,6 +258,9 @@ export default function RichTextEditor({ value, onChange }) {
               placeholder="Paste any ImgBB link"
               className="mt-3 w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
+            {imageError && (
+              <p className="mt-2 text-xs text-red-600">{imageError}</p>
+            )}
             <a
               href="https://imgbb.com/"
               target="_blank"
@@ -273,4 +290,4 @@ export default function RichTextEditor({ value, onChange }) {
       )}
     </div>
   );
-}
+            }
