@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
+import { normalizeMediaSpacing } from "@/lib/youtube";
 
 export default function ModuleIntroEditPage() {
   const router = useRouter();
@@ -59,12 +60,14 @@ export default function ModuleIntroEditPage() {
   async function handleSave() {
     setSaving(true);
     setSaveMessage("");
+    const cleanContent = normalizeMediaSpacing(introContent);
     const { error } = await supabase
       .from("modules")
-      .update({ title, video_url: videoUrl || null, intro_content: introContent || null })
+      .update({ title, video_url: videoUrl || null, intro_content: cleanContent || null })
       .eq("course_id", courseId)
       .eq("number", moduleNumber);
     setSaving(false);
+    if (!error) setIntroContent(cleanContent);
     setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
   }
 
@@ -78,7 +81,7 @@ export default function ModuleIntroEditPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-16">
-      <div className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mx-auto max-w-2xl px-3 py-10">
         <Link
           href={`/admin/courses/${courseId}/modules/${moduleNumber}`}
           className="text-sm font-medium text-primary hover:underline"
@@ -152,4 +155,4 @@ export default function ModuleIntroEditPage() {
       </div>
     </div>
   );
-                }
+           }
