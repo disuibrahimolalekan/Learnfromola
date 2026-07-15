@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
+import ContentPreview from "@/components/admin/ContentPreview";
 
 export default function AdminModuleEditPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function AdminModuleEditPage() {
   const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [introContent, setIntroContent] = useState("");
+  const [mode, setMode] = useState("edit"); // "edit" | "preview"
   const [chapters, setChapters] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -41,8 +43,6 @@ export default function AdminModuleEditPage() {
         return;
       }
 
-      // Scoped by course_id, not just number — module numbers repeat across
-      // courses, so course_id is what makes this lookup actually unique.
       const [moduleResult, chaptersResult] = await Promise.all([
         supabase
           .from("modules")
@@ -145,31 +145,48 @@ export default function AdminModuleEditPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           />
+        </div>
 
-          <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
+        <div className="mt-4">
+          <label className="mb-1 block text-sm font-medium text-text-primary">
             Intro Content
           </label>
-          <MarkdownToolbar
-            textareaRef={introTextareaRef}
-            value={introContent}
-            onChange={setIntroContent}
-          />
-          <textarea
-            ref={introTextareaRef}
-            value={introContent}
-            onChange={(e) => setIntroContent(e.target.value)}
-            rows={14}
-            placeholder="Leave empty if this module has no introduction."
-            className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
-          >
-            {saving ? "Saving…" : "Save Module"}
-          </button>
+          {mode === "edit" ? (
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <MarkdownToolbar
+                textareaRef={introTextareaRef}
+                value={introContent}
+                onChange={setIntroContent}
+              />
+              <textarea
+                ref={introTextareaRef}
+                value={introContent}
+                onChange={(e) => setIntroContent(e.target.value)}
+                rows={14}
+                placeholder="Leave empty if this module has no introduction."
+                className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+          ) : (
+            <ContentPreview content={introContent} />
+          )}
+
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => setMode(mode === "edit" ? "preview" : "edit")}
+              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+            >
+              {mode === "edit" ? "Preview" : "← Back to Edit"}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save Module"}
+            </button>
+          </div>
           {saveMessage && (
             <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
           )}
@@ -262,4 +279,4 @@ export default function AdminModuleEditPage() {
       </div>
     </div>
   );
-      }
+            }
