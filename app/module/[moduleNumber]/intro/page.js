@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { formatQuotes } from "@/lib/formatContent";
 import { getCurrentCourseId } from "@/lib/currentCourse";
+import { toYoutubeEmbedUrl } from "@/lib/youtube";
+import MarkdownContent from "@/components/MarkdownContent";
 
 export default function ModuleIntroPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function ModuleIntroPage() {
 
       const { data, error } = await supabase
         .from("modules")
-        .select("number, title, intro_content")
+        .select("number, title, video_url, intro_content")
         .eq("course_id", courseId)
         .eq("number", moduleNumber)
         .maybeSingle();
@@ -59,7 +60,7 @@ export default function ModuleIntroPage() {
     );
   }
 
-  if (!moduleRow || !moduleRow.intro_content) {
+  if (!moduleRow || (!moduleRow.intro_content && !moduleRow.video_url)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-6 text-center">
         <p className="text-sm text-text-secondary">
@@ -85,9 +86,24 @@ export default function ModuleIntroPage() {
           ← Back to Module {moduleNumber}
         </Link>
 
-        <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <ReactMarkdown>{formatQuotes(moduleRow.intro_content)}</ReactMarkdown>
-        </div>
+        {moduleRow.video_url && (
+          <div className="mt-6 overflow-hidden rounded-2xl border border-border shadow-sm">
+            <div className="aspect-video w-full">
+              <iframe
+                src={toYoutubeEmbedUrl(moduleRow.video_url)}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+
+        {moduleRow.intro_content && (
+          <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <MarkdownContent>{formatQuotes(moduleRow.intro_content)}</MarkdownContent>
+          </div>
+        )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-sm">
