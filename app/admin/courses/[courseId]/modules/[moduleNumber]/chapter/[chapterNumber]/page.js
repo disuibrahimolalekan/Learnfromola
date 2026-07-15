@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
+import { normalizeMediaSpacing } from "@/lib/youtube";
 import { setPendingUndo } from "@/lib/undoStore";
 
 export default function AdminChapterEditPage() {
@@ -63,13 +64,18 @@ export default function AdminChapterEditPage() {
   async function handleSave() {
     setSaving(true);
     setSaveMessage("");
+    // Spacing clean-up happens here, once, right before writing to the
+    // database — not on every keystroke, which was causing the editor to
+    // reset itself while typing.
+    const cleanContent = normalizeMediaSpacing(content);
     const { error } = await supabase
       .from("chapters")
-      .update({ title, content, video_url: videoUrl || null })
+      .update({ title, content: cleanContent, video_url: videoUrl || null })
       .eq("course_id", courseId)
       .eq("module_number", moduleNumber)
       .eq("chapter_number", chapterNumber);
     setSaving(false);
+    if (!error) setContent(cleanContent);
     setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
   }
 
@@ -93,8 +99,6 @@ export default function AdminChapterEditPage() {
       return;
     }
 
-    // Store what was deleted, then go straight to the Module page —
-    // that's where the real, functional Undo toast lives (file #6).
     setPendingUndo({
       type: "chapter",
       courseId,
@@ -115,7 +119,7 @@ export default function AdminChapterEditPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-16">
-      <div className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mx-auto max-w-2xl px-3 py-10">
         <Link
           href={`/admin/courses/${courseId}/modules/${moduleNumber}`}
           className="text-sm font-medium text-primary hover:underline"
@@ -206,4 +210,4 @@ export default function AdminChapterEditPage() {
       </div>
     </div>
   );
-           }
+                }
