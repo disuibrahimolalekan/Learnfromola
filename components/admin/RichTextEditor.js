@@ -20,6 +20,7 @@ export default function RichTextEditor({ value, onChange }) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [dialogUrl, setDialogUrl] = useState("");
   const [linkSelection, setLinkSelection] = useState(null);
+  const [resolvingImage, setResolvingImage] = useState(false);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -33,11 +34,6 @@ export default function RichTextEditor({ value, onChange }) {
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
-      // Pass through exactly what the editor itself produced — no
-      // reformatting here. Reformatting on every keystroke made this look
-      // like an external change each time, which reset the whole document
-      // and threw the cursor to the bottom. Spacing cleanup now happens
-      // once, at Save time, in each page's handleSave.
       onChange(editor.storage.markdown.getMarkdown());
     },
     editorProps: {
@@ -91,10 +87,22 @@ export default function RichTextEditor({ value, onChange }) {
     setLinkSelection(null);
   }
 
-  function handleInsertImage() {
+  async function handleInsertImage() {
     if (!dialogUrl.trim()) return;
-    const url = normalizeUrl(dialogUrl);
-    editor.chain().focus().setImage({ src: url }).run();
+    const rawUrl = normalizeUrl(dialogUrl);
+
+    setResolvingImage(true);
+    let finalUrl = rawUrl;
+    try {
+      const res = await fetch(`/api/resolve-image-url?url=${encodeURIComponent(rawUrl)}`);
+      const data = await res.json();
+      if (data?.url) finalUrl = data.url;
+    } catch (e) {
+      console.error("Failed to resolve image URL:", e);
+    }
+    setResolvingImage(false);
+
+    editor.chain().focus().setImage({ src: finalUrl }).run();
     setDialogUrl("");
     setImageDialogOpen(false);
   }
@@ -220,7 +228,7 @@ export default function RichTextEditor({ value, onChange }) {
       {imageDialogOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
-          onClick={() => setImageDialogOpen(false)}
+          onClick={() => !resolvingImage && setImageDialogOpen(false)}
         >
           <div
             className="w-full max-w-sm rounded-t-2xl bg-card p-5 shadow-lg sm:rounded-2xl"
@@ -233,7 +241,7 @@ export default function RichTextEditor({ value, onChange }) {
               autoFocus
               value={dialogUrl}
               onChange={(e) => setDialogUrl(e.target.value)}
-              placeholder="https://..."
+              placeholder="Paste any ImgBB link"
               className="mt-3 w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
             <a
@@ -247,15 +255,17 @@ export default function RichTextEditor({ value, onChange }) {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => setImageDialogOpen(false)}
-                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text-primary"
+                disabled={resolvingImage}
+                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text-primary disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 onClick={handleInsertImage}
-                className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
+                disabled={resolvingImage}
+                className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
               >
-                Add Image
+                {resolvingImage ? "Resolving…" : "Add Image"}
               </button>
             </div>
           </div>
@@ -263,4 +273,4 @@ export default function RichTextEditor({ value, onChange }) {
       )}
     </div>
   );
-                       }
+}
