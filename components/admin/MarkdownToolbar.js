@@ -128,4 +128,4 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }) {
       ))}
     </div>
   );
-                    }
+  }
