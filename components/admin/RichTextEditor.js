@@ -3,14 +3,10 @@
 import { useEffect, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import TiptapLink from "@tiptap/extension-link";
 import TiptapImage from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
+import { isYoutubeUrl, normalizeMediaSpacing } from "@/lib/youtube";
 
-// If someone types a bare domain without a protocol, browsers treat it as
-// a path relative to the current page instead of a real destination —
-// this quietly broke a link before. Auto-prepend https:// unless it's
-// already a full URL, a mailto link, or an in-site path starting with "/".
 function normalizeUrl(url) {
   const trimmed = url.trim();
   if (/^(https?:\/\/|mailto:)/i.test(trimmed) || trimmed.startsWith("/")) {
@@ -19,41 +15,37 @@ function normalizeUrl(url) {
   return `https://${trimmed}`;
 }
 
-// A WYSIWYG editor that stores and loads plain markdown underneath (via
-// tiptap-markdown), so all existing chapter/module/checklist content in
-// Supabase keeps working untouched — only the *editing experience*
-// changes from raw markdown text to visual formatting.
 export default function RichTextEditor({ value, onChange }) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [dialogUrl, setDialogUrl] = useState("");
+  const [linkSelection, setLinkSelection] = useState(null);
 
   const editor = useEditor({
-    immediatelyRender: false, // avoids SSR hydration mismatch in Next.js
+    immediatelyRender: false,
     extensions: [
+      // Link lives INSIDE StarterKit in this version — configuring it here
+      // instead of adding a separate @tiptap/extension-link avoids a
+      // duplicate-extension conflict that was silently breaking commands.
       StarterKit.configure({
         heading: { levels: [1, 2] },
+        link: { openOnClick: false, autolink: false },
       }),
-      TiptapLink.configure({ openOnClick: false, autolink: false }),
       TiptapImage,
       Markdown.configure({ html: false, transformPastedText: true }),
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
-      onChange(editor.storage.markdown.getMarkdown());
+      const markdown = editor.storage.markdown.getMarkdown();
+      onChange(normalizeMediaSpacing(markdown));
     },
     editorProps: {
       attributes: {
-        // Reuses the same class the real student-facing pages use, so
-        // what you see while typing already looks like the final page.
         class: "markdown-content min-h-[240px] focus:outline-none",
       },
     },
   });
 
-  // The real value arrives async (after a Supabase fetch completes,
-  // slightly after this component first mounts) — sync it in when it
-  // changes from outside, but don't fight the user's own typing.
   useEffect(() => {
     if (editor && value !== undefined) {
       const current = editor.storage.markdown.getMarkdown();
@@ -65,16 +57,41 @@ export default function RichTextEditor({ value, onChange }) {
 
   if (!editor) return null;
 
+  function openLinkDialog() {
+    const { from, to } = editor.state.selection;
+    setLinkSelection({ from, to });
+    setDialogUrl("");
+    setLinkDialogOpen(true);
+  }
+
   function handleInsertLink() {
-    if (!dialogUrl.trim()) return;
+    if (!dialogUrl.trim() || !linkSelection) return;
     const url = normalizeUrl(dialogUrl);
-    if (editor.state.selection.empty) {
-      editor.chain().focus().insertContent(`<a href="${url}">${url}</a>`).run();
+    const { from, to } = linkSelection;
+    const isVideo = isYoutubeUrl(url);
+
+    if (from === to) {
+      // Nothing selected — insert real link text. YouTube links get a
+      // friendly label; the actual embedding happens at DISPLAY time
+      // (Preview and the student page both detect the YouTube href and
+      // swap the link for a real playable iframe there).
+      const label = isVideo ? "🎥 Watch on YouTube" : url;
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(from, {
+          type: "text",
+          text: label,
+          marks: [{ type: "link", attrs: { href: url } }],
+        })
+        .run();
     } else {
-      editor.chain().focus().setLink({ href: url }).run();
+      editor.chain().focus().setTextSelection({ from, to }).setLink({ href: url }).run();
     }
+
     setDialogUrl("");
     setLinkDialogOpen(false);
+    setLinkSelection(null);
   }
 
   function handleInsertImage() {
@@ -116,11 +133,8 @@ export default function RichTextEditor({ value, onChange }) {
 
         <button
           type="button"
-          title="Link"
-          onClick={() => {
-            setDialogUrl("");
-            setLinkDialogOpen(true);
-          }}
+          title="Link or YouTube video"
+          onClick={openLinkDialog}
           className={`flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm transition ${
             editor.isActive("link")
               ? "border-primary bg-primary/10 text-primary"
@@ -176,15 +190,18 @@ export default function RichTextEditor({ value, onChange }) {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-display text-base font-semibold text-text-primary">
-              Add Link
+              Add Link or YouTube Video
             </h3>
             <input
               autoFocus
               value={dialogUrl}
               onChange={(e) => setDialogUrl(e.target.value)}
-              placeholder="example.com or https://..."
+              placeholder="example.com or a YouTube link"
               className="mt-3 w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
+            <p className="mt-2 text-xs text-text-secondary">
+              A YouTube link will show as a playable video wherever it&apos;s placed. Anything else becomes a clickable link.
+            </p>
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => setLinkDialogOpen(false)}
@@ -196,7 +213,7 @@ export default function RichTextEditor({ value, onChange }) {
                 onClick={handleInsertLink}
                 className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
               >
-                Add Link
+                Add
               </button>
             </div>
           </div>
@@ -249,4 +266,4 @@ export default function RichTextEditor({ value, onChange }) {
       )}
     </div>
   );
-  }
+}
