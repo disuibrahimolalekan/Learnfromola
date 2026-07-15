@@ -1,8 +1,3 @@
-// ImgBB's default "share" link (ibb.co/xxxxx) is a viewer webpage, not an
-// actual image file — pasting it as an <img> source shows nothing. The
-// real direct image link (i.ibb.co/...) is embedded in that page's
-// metadata. This resolves it server-side so users never need to know the
-// difference between the two kinds of ImgBB links.
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url");
@@ -12,19 +7,27 @@ export async function GET(request) {
   }
 
   if (!/^https?:\/\/ibb\.co\//i.test(url)) {
-    return Response.json({ url });
+    return Response.json({ url, resolved: true });
   }
 
   try {
-    const pageResponse = await fetch(url);
+    // A plain server-side fetch can get blocked or served a different page
+    // than a real browser would see. Sending real browser-like headers
+    // avoids that.
+    const pageResponse = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+    });
     const html = await pageResponse.text();
     const match = html.match(/<meta property="og:image" content="([^"]+)"/i);
     if (match && match[1]) {
-      return Response.json({ url: match[1] });
+      return Response.json({ url: match[1], resolved: true });
     }
-    return Response.json({ url });
+    return Response.json({ url, resolved: false });
   } catch (e) {
     console.error("Failed to resolve ImgBB link:", e.message);
-    return Response.json({ url });
+    return Response.json({ url, resolved: false });
   }
 }
