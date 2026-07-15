@@ -14,7 +14,8 @@ export default function ModuleIntroEditPage() {
   const moduleNumber = Number(params.moduleNumber);
 
   const [checking, setChecking] = useState(true);
-  const [moduleTitle, setModuleTitle] = useState("");
+  const [title, setTitle] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
   const [introContent, setIntroContent] = useState("");
   const [mode, setMode] = useState("edit");
   const [saving, setSaving] = useState(false);
@@ -42,12 +43,13 @@ export default function ModuleIntroEditPage() {
 
       const { data } = await supabase
         .from("modules")
-        .select("title, intro_content")
+        .select("title, video_url, intro_content")
         .eq("course_id", courseId)
         .eq("number", moduleNumber)
         .maybeSingle();
 
-      setModuleTitle(data?.title || "");
+      setTitle(data?.title || "");
+      setVideoUrl(data?.video_url || "");
       setIntroContent(data?.intro_content || "");
       setChecking(false);
     }
@@ -59,7 +61,7 @@ export default function ModuleIntroEditPage() {
     setSaveMessage("");
     const { error } = await supabase
       .from("modules")
-      .update({ intro_content: introContent || null })
+      .update({ title, video_url: videoUrl || null, intro_content: introContent || null })
       .eq("course_id", courseId)
       .eq("number", moduleNumber);
     setSaving(false);
@@ -88,15 +90,42 @@ export default function ModuleIntroEditPage() {
           Module Introduction
         </h1>
 
-        <div className="mt-6">
+        {mode === "edit" && (
+          <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <label className="mb-1 block text-sm font-medium text-text-primary">
+              Module Title
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
+
+            <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
+              Video Link (optional)
+            </label>
+            <input
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtube.com/..."
+              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
+          </div>
+        )}
+
+        <div className="mt-4">
           {mode === "edit" ? (
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <label className="mb-1 block text-sm font-medium text-text-primary">
+                Content
+              </label>
               <RichTextEditor value={introContent} onChange={setIntroContent} />
             </div>
           ) : (
             <ContentPreview
               eyebrow={`Module ${moduleNumber}`}
-              title={moduleTitle}
+              title={title}
+              videoUrl={videoUrl}
               content={introContent}
             />
           )}
@@ -123,4 +152,4 @@ export default function ModuleIntroEditPage() {
       </div>
     </div>
   );
-    }
+                }
