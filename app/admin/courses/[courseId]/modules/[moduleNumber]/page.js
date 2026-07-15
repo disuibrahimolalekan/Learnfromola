@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
-import ContentPreview from "@/components/admin/ContentPreview";
+import UndoToast from "@/components/admin/UndoToast";
+import { setPendingUndo, getPendingUndo, clearPendingUndo } from "@/lib/undoStore";
 
 export default function AdminModuleEditPage() {
   const router = useRouter();
@@ -16,12 +16,12 @@ export default function AdminModuleEditPage() {
   const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [introContent, setIntroContent] = useState("");
-  const [mode, setMode] = useState("edit"); // "edit" | "preview"
+  const [hasIntro, setHasIntro] = useState(false);
   const [chapters, setChapters] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const introTextareaRef = useRef(null);
+  const [undo, setUndo] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -60,18 +60,30 @@ export default function AdminModuleEditPage() {
 
       setTitle(moduleResult.data?.title || "");
       setIntroContent(moduleResult.data?.intro_content || "");
+      setHasIntro(Boolean(moduleResult.data?.intro_content));
       setChapters(chaptersResult.data || []);
       setChecking(false);
+
+      // Was a chapter just deleted, sending us back here? Show its Undo toast.
+      const pending = getPendingUndo();
+      if (
+        pending &&
+        pending.type === "chapter" &&
+        pending.courseId === courseId &&
+        pending.moduleNumber === moduleNumber
+      ) {
+        setUndo(pending);
+      }
     }
     load();
   }, [moduleNumber, courseId, router]);
 
-  async function handleSave() {
+  async function handleSaveTitle() {
     setSaving(true);
     setSaveMessage("");
     const { error } = await supabase
       .from("modules")
-      .update({ title, intro_content: introContent || null })
+      .update({ title })
       .eq("course_id", courseId)
       .eq("number", moduleNumber);
     setSaving(false);
@@ -80,11 +92,19 @@ export default function AdminModuleEditPage() {
 
   async function handleDeleteModule() {
     const confirmed = window.confirm(
-      `Delete Module ${moduleNumber} — "${title}"?\n\nThis will permanently delete this module AND all ${chapters.length} of its chapters. This cannot be undone.`
+      `Delete Module ${moduleNumber} — "${title}"?\n\nThis will permanently delete this module AND all ${chapters.length} of its chapters. You'll have 30 seconds to undo — after that, it's gone for good.`
     );
     if (!confirmed) return;
 
     setDeleting(true);
+
+    // Grab full chapter data (not just title) before deleting, so Undo
+    // can restore everything — content and video links included.
+    const { data: fullChapters } = await supabase
+      .from("chapters")
+      .select("chapter_number, title, content, video_url")
+      .eq("course_id", courseId)
+      .eq("module_number", moduleNumber);
 
     const { error: chaptersError } = await supabase
       .from("chapters")
@@ -111,7 +131,44 @@ export default function AdminModuleEditPage() {
       return;
     }
 
+    setPendingUndo({
+      type: "module",
+      courseId,
+      module: { number: moduleNumber, title, intro_content: introContent },
+      chapters: fullChapters || [],
+    });
+
     router.replace(`/admin/courses/${courseId}/modules`);
+  }
+
+  async function handleUndoChapter() {
+    if (!undo) return;
+
+    const { data: moduleRow } = await supabase
+      .from("modules")
+      .select("id")
+      .eq("course_id", courseId)
+      .eq("number", moduleNumber)
+      .maybeSingle();
+
+    const { error } = await supabase.from("chapters").insert({
+      course_id: courseId,
+      module_id: moduleRow?.id,
+      module_number: moduleNumber,
+      chapter_number: undo.chapter.chapter_number,
+      title: undo.chapter.title,
+      content: undo.chapter.content,
+      video_url: undo.chapter.video_url,
+    });
+
+    if (error) {
+      alert(`Failed to restore chapter: ${error.message}`);
+      return;
+    }
+
+    clearPendingUndo();
+    setUndo(null);
+    window.location.reload();
   }
 
   if (checking) {
@@ -145,52 +202,30 @@ export default function AdminModuleEditPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           />
-        </div>
-
-        <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-text-primary">
-            Intro Content
-          </label>
-
-          {mode === "edit" ? (
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <MarkdownToolbar
-                textareaRef={introTextareaRef}
-                value={introContent}
-                onChange={setIntroContent}
-              />
-              <textarea
-                ref={introTextareaRef}
-                value={introContent}
-                onChange={(e) => setIntroContent(e.target.value)}
-                rows={14}
-                placeholder="Leave empty if this module has no introduction."
-                className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
-            </div>
-          ) : (
-            <ContentPreview content={introContent} />
-          )}
-
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => setMode(mode === "edit" ? "preview" : "edit")}
-              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
-            >
-              {mode === "edit" ? "Preview" : "← Back to Edit"}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save Module"}
-            </button>
-          </div>
+          <button
+            onClick={handleSaveTitle}
+            disabled={saving}
+            className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save Title"}
+          </button>
           {saveMessage && (
             <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
           )}
         </div>
+
+        {/* Module Introduction now has its own editor, same as a chapter does */}
+        <Link
+          href={`/admin/courses/${courseId}/modules/${moduleNumber}/intro`}
+          className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:bg-primary/10"
+        >
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-text-secondary">
+            ✎
+          </span>
+          <span className="text-sm font-medium text-text-primary">
+            Module Introduction {hasIntro ? "" : "(empty)"}
+          </span>
+        </Link>
 
         <div className="mt-8 flex items-center justify-between gap-3">
           <h2 className="font-display text-lg font-semibold text-text-primary">
@@ -266,7 +301,7 @@ export default function AdminModuleEditPage() {
           </h3>
           <p className="mt-1 text-xs text-red-700">
             Deleting this module also deletes all {chapters.length} of its
-            chapters. This cannot be undone.
+            chapters.
           </p>
           <button
             onClick={handleDeleteModule}
@@ -277,6 +312,18 @@ export default function AdminModuleEditPage() {
           </button>
         </div>
       </div>
+
+      {undo && (
+        <UndoToast
+          message={`Chapter ${undo.chapter.chapter_number} deleted.`}
+          expiresAt={undo.expiresAt}
+          onUndo={handleUndoChapter}
+          onExpire={() => {
+            clearPendingUndo();
+            setUndo(null);
+          }}
+        />
+      )}
     </div>
   );
-            }
+        }
