@@ -5,7 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapImage from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
-import { isYoutubeUrl, normalizeMediaSpacing } from "@/lib/youtube";
+import { isYoutubeUrl } from "@/lib/youtube";
 
 function normalizeUrl(url) {
   const trimmed = url.trim();
@@ -24,9 +24,6 @@ export default function RichTextEditor({ value, onChange }) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      // Link lives INSIDE StarterKit in this version — configuring it here
-      // instead of adding a separate @tiptap/extension-link avoids a
-      // duplicate-extension conflict that was silently breaking commands.
       StarterKit.configure({
         heading: { levels: [1, 2] },
         link: { openOnClick: false, autolink: false },
@@ -36,8 +33,12 @@ export default function RichTextEditor({ value, onChange }) {
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
-      const markdown = editor.storage.markdown.getMarkdown();
-      onChange(normalizeMediaSpacing(markdown));
+      // Pass through exactly what the editor itself produced — no
+      // reformatting here. Reformatting on every keystroke made this look
+      // like an external change each time, which reset the whole document
+      // and threw the cursor to the bottom. Spacing cleanup now happens
+      // once, at Save time, in each page's handleSave.
+      onChange(editor.storage.markdown.getMarkdown());
     },
     editorProps: {
       attributes: {
@@ -71,10 +72,6 @@ export default function RichTextEditor({ value, onChange }) {
     const isVideo = isYoutubeUrl(url);
 
     if (from === to) {
-      // Nothing selected — insert real link text. YouTube links get a
-      // friendly label; the actual embedding happens at DISPLAY time
-      // (Preview and the student page both detect the YouTube href and
-      // swap the link for a real playable iframe there).
       const label = isVideo ? "🎥 Watch on YouTube" : url;
       editor
         .chain()
@@ -266,4 +263,4 @@ export default function RichTextEditor({ value, onChange }) {
       )}
     </div>
   );
-}
+                       }
