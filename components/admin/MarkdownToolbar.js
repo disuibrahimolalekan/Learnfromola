@@ -53,6 +53,19 @@ function insertAtCursor(textarea, value, onChange, text, cursorOffset) {
   });
 }
 
+// If someone types a bare domain or path without a protocol, the browser
+// treats it as relative to the current page instead of a real destination
+// — this is what sent Oyin's link to a nonexistent module. Auto-prepend
+// https:// unless it's already a full URL, a mailto link, or an in-site
+// path starting with "/".
+function normalizeUrl(url) {
+  const trimmed = url.trim();
+  if (/^(https?:\/\/|mailto:)/i.test(trimmed) || trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
 const buttons = [
   { label: "B", title: "Bold", action: "bold", className: "font-bold" },
   { label: "I", title: "Italic", action: "italic", className: "italic" },
@@ -73,8 +86,9 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }) {
     if (action === "list") prefixLines(textarea, value, onChange, "- ");
 
     if (action === "link") {
-      const url = window.prompt("Link URL:");
-      if (!url) return;
+      const rawUrl = window.prompt("Link URL:");
+      if (!rawUrl) return;
+      const url = normalizeUrl(rawUrl);
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const selected = value.slice(start, end) || "link text";
@@ -84,11 +98,16 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }) {
     }
 
     if (action === "image") {
-      const url = window.prompt("Image URL:");
-      if (!url) return;
+      const rawUrl = window.prompt("Image URL:");
+      if (!rawUrl) return;
+      const url = normalizeUrl(rawUrl);
       insertAtCursor(textarea, value, onChange, `
 
+
+
 ![image](${url})
+
+
 
 `);
     }
@@ -109,4 +128,4 @@ export default function MarkdownToolbar({ textareaRef, value, onChange }) {
       ))}
     </div>
   );
-                               }
+                    }
