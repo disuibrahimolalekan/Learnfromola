@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
+import ContentPreview from "@/components/admin/ContentPreview";
 
 export default function AdminChecklistEditPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function AdminChecklistEditPage() {
   const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [mode, setMode] = useState("edit"); // "edit" | "preview"
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const contentTextareaRef = useRef(null);
@@ -56,9 +58,6 @@ export default function AdminChecklistEditPage() {
     setSaving(true);
     setSaveMessage("");
 
-    // Upsert, not update — a brand-new course has no checklist row yet,
-    // so the first save here needs to create one rather than silently
-    // affecting zero rows.
     const { error } = await supabase
       .from("pages")
       .upsert(
@@ -101,30 +100,46 @@ export default function AdminChecklistEditPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           />
+        </div>
 
-          <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
-            Content
-          </label>
-          <MarkdownToolbar
-            textareaRef={contentTextareaRef}
-            value={content}
-            onChange={setContent}
-          />
-          <textarea
-            ref={contentTextareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={20}
-            className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
+        <div className="mt-4">
+          {mode === "edit" ? (
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <label className="mb-1 block text-sm font-medium text-text-primary">
+                Content
+              </label>
+              <MarkdownToolbar
+                textareaRef={contentTextareaRef}
+                value={content}
+                onChange={setContent}
+              />
+              <textarea
+                ref={contentTextareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={20}
+                className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+          ) : (
+            <ContentPreview content={content} />
+          )}
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
-          >
-            {saving ? "Saving…" : "Save Page"}
-          </button>
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => setMode(mode === "edit" ? "preview" : "edit")}
+              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+            >
+              {mode === "edit" ? "Preview" : "← Back to Edit"}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save Page"}
+            </button>
+          </div>
           {saveMessage && (
             <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
           )}
@@ -132,4 +147,4 @@ export default function AdminChecklistEditPage() {
       </div>
     </div>
   );
-             }
+                                     }
