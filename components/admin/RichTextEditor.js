@@ -92,6 +92,20 @@ export default function RichTextEditor({ value, onChange }) {
     if (!dialogUrl.trim()) return;
     const rawUrl = normalizeUrl(dialogUrl);
 
+    // Only ImgBB's viewer-page links (ibb.co/xxxx — no "i.") ever need
+    // resolving. Direct links (i.ibb.co/... or any other image host) are
+    // used immediately with zero network calls, so a resolver hiccup can
+    // never block a link that was already correct.
+    const needsResolving = /^https?:\/\/ibb\.co\//i.test(rawUrl);
+
+    if (!needsResolving) {
+      editor.chain().focus().setImage({ src: rawUrl }).run();
+      setDialogUrl("");
+      setImageError("");
+      setImageDialogOpen(false);
+      return;
+    }
+
     setResolvingImage(true);
     setImageError("");
 
