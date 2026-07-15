@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
+import { normalizeMediaSpacing } from "@/lib/youtube";
 
 export default function AdminChecklistEditPage() {
   const router = useRouter();
@@ -56,15 +57,17 @@ export default function AdminChecklistEditPage() {
   async function handleSave() {
     setSaving(true);
     setSaveMessage("");
+    const cleanContent = normalizeMediaSpacing(content);
 
     const { error } = await supabase
       .from("pages")
       .upsert(
-        { course_id: courseId, slug: "checklist", title, content },
+        { course_id: courseId, slug: "checklist", title, content: cleanContent },
         { onConflict: "course_id,slug" }
       );
 
     setSaving(false);
+    if (!error) setContent(cleanContent);
     setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
   }
 
@@ -78,7 +81,7 @@ export default function AdminChecklistEditPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-16">
-      <div className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mx-auto max-w-2xl px-3 py-10">
         <Link
           href={`/admin/courses/${courseId}/modules`}
           className="text-sm font-medium text-primary hover:underline"
@@ -137,4 +140,4 @@ export default function AdminChecklistEditPage() {
       </div>
     </div>
   );
-          }
+      }
