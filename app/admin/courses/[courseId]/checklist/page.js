@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
 
 export default function AdminChecklistEditPage() {
@@ -15,10 +15,9 @@ export default function AdminChecklistEditPage() {
   const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [mode, setMode] = useState("edit"); // "edit" | "preview"
+  const [mode, setMode] = useState("edit");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const contentTextareaRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -91,16 +90,18 @@ export default function AdminChecklistEditPage() {
           Edit Checklist Page
         </h1>
 
-        <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <label className="mb-1 block text-sm font-medium text-text-primary">
-            Page Title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
-        </div>
+        {mode === "edit" && (
+          <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <label className="mb-1 block text-sm font-medium text-text-primary">
+              Page Title
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
+          </div>
+        )}
 
         <div className="mt-4">
           {mode === "edit" ? (
@@ -108,21 +109,10 @@ export default function AdminChecklistEditPage() {
               <label className="mb-1 block text-sm font-medium text-text-primary">
                 Content
               </label>
-              <MarkdownToolbar
-                textareaRef={contentTextareaRef}
-                value={content}
-                onChange={setContent}
-              />
-              <textarea
-                ref={contentTextareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={20}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
+              <RichTextEditor value={content} onChange={setContent} />
             </div>
           ) : (
-            <ContentPreview content={content} />
+            <ContentPreview title={title} content={content} />
           )}
 
           <div className="mt-4 flex gap-2">
@@ -147,4 +137,4 @@ export default function AdminChecklistEditPage() {
       </div>
     </div>
   );
-                                     }
+          }
