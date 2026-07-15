@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
+import { setPendingUndo } from "@/lib/undoStore";
 
 export default function AdminChapterEditPage() {
   const router = useRouter();
@@ -18,11 +19,10 @@ export default function AdminChapterEditPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [mode, setMode] = useState("edit"); // "edit" | "preview"
+  const [mode, setMode] = useState("edit");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const contentTextareaRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -75,7 +75,7 @@ export default function AdminChapterEditPage() {
 
   async function handleDeleteChapter() {
     const confirmed = window.confirm(
-      `Delete Chapter ${chapterNumber} — "${title}"?\n\nThis cannot be undone.`
+      `Delete Chapter ${chapterNumber} — "${title}"?\n\nYou'll have 30 seconds to undo — after that, it's gone for good.`
     );
     if (!confirmed) return;
 
@@ -92,6 +92,15 @@ export default function AdminChapterEditPage() {
       alert(`Failed to delete chapter: ${error.message}`);
       return;
     }
+
+    // Store what was deleted, then go straight to the Module page —
+    // that's where the real, functional Undo toast lives (file #6).
+    setPendingUndo({
+      type: "chapter",
+      courseId,
+      moduleNumber,
+      chapter: { chapter_number: chapterNumber, title, content, video_url: videoUrl || null },
+    });
 
     router.replace(`/admin/courses/${courseId}/modules/${moduleNumber}`);
   }
@@ -118,49 +127,45 @@ export default function AdminChapterEditPage() {
           Chapter {chapterNumber}
         </h1>
 
-        <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <label className="mb-1 block text-sm font-medium text-text-primary">
-            Chapter Title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
+        {mode === "edit" && (
+          <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <label className="mb-1 block text-sm font-medium text-text-primary">
+              Chapter Title
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
 
-          <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
-            Video Link (optional)
-          </label>
-          <input
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="https://youtube.com/..."
-            className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
-        </div>
+            <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
+              Video Link (optional)
+            </label>
+            <input
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtube.com/..."
+              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
+          </div>
+        )}
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-text-primary">
-            Chapter Content
-          </label>
-
           {mode === "edit" ? (
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <MarkdownToolbar
-                textareaRef={contentTextareaRef}
-                value={content}
-                onChange={setContent}
-              />
-              <textarea
-                ref={contentTextareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={20}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
+              <label className="mb-1 block text-sm font-medium text-text-primary">
+                Chapter Content
+              </label>
+              <RichTextEditor value={content} onChange={setContent} />
             </div>
           ) : (
-            <ContentPreview content={content} isChapter />
+            <ContentPreview
+              eyebrow={`Chapter ${chapterNumber}`}
+              title={title}
+              videoUrl={videoUrl}
+              content={content}
+              isChapter
+            />
           )}
 
           <div className="mt-4 flex gap-2">
@@ -188,7 +193,7 @@ export default function AdminChapterEditPage() {
             Danger Zone
           </h3>
           <p className="mt-1 text-xs text-red-700">
-            This permanently deletes this chapter. This cannot be undone.
+            This permanently deletes this chapter.
           </p>
           <button
             onClick={handleDeleteChapter}
@@ -201,4 +206,4 @@ export default function AdminChapterEditPage() {
       </div>
     </div>
   );
-    }
+           }
