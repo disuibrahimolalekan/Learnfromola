@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { formatQuotes } from "@/lib/formatContent";
+import { getCurrentCourseId } from "@/lib/currentCourse";
+import MarkdownContent from "@/components/MarkdownContent";
 
 export default function ChecklistPage() {
   const router = useRouter();
@@ -23,9 +24,16 @@ export default function ChecklistPage() {
         return;
       }
 
+      const courseId = await getCurrentCourseId();
+      if (!courseId) {
+        setChecking(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("pages")
         .select("title, content")
+        .eq("course_id", courseId)
         .eq("slug", "checklist")
         .maybeSingle();
 
@@ -64,7 +72,7 @@ export default function ChecklistPage() {
               {page.title}
             </h1>
             <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <ReactMarkdown>{formatQuotes(page.content)}</ReactMarkdown>
+              <MarkdownContent>{formatQuotes(page.content)}</MarkdownContent>
             </div>
           </>
         ) : (
@@ -75,4 +83,4 @@ export default function ChecklistPage() {
       </div>
     </div>
   );
-          }
+}
