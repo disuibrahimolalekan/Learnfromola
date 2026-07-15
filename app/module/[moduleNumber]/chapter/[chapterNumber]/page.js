@@ -80,10 +80,13 @@ export default function ChapterReaderPage() {
       );
       setChecking(false);
 
+      // course_id is required here now — progress rows are scoped per
+      // course so they stay correct once a second course exists.
       const { data: existing } = await supabase
         .from("progress")
         .select("chapter_number")
         .eq("user_id", session.user.id)
+        .eq("course_id", courseId)
         .eq("module_number", moduleNumber)
         .eq("chapter_number", chapterNumber)
         .maybeSingle();
@@ -91,6 +94,7 @@ export default function ChapterReaderPage() {
       if (!existing) {
         const { error: insertError } = await supabase.from("progress").insert({
           user_id: session.user.id,
+          course_id: courseId,
           module_number: moduleNumber,
           chapter_number: chapterNumber,
         });
@@ -127,9 +131,6 @@ export default function ChapterReaderPage() {
     );
   }
 
-  // Determine true first/last and previous/next based on the actual
-  // chapters that exist, not assumed sequential numbering — this stays
-  // correct even if a chapter in the middle has been deleted.
   const currentIndex = siblingChapterNumbers.indexOf(chapterNumber);
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === siblingChapterNumbers.length - 1;
@@ -233,4 +234,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-                }
+          }
