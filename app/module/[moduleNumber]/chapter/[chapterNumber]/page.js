@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { formatQuotes } from "@/lib/formatContent";
 import { getCurrentCourseId } from "@/lib/currentCourse";
+import { toYoutubeEmbedUrl } from "@/lib/youtube";
 import FlowChart from "@/components/ui/FlowChart";
 
 function stripQuiz(content) {
@@ -80,8 +81,6 @@ export default function ChapterReaderPage() {
       );
       setChecking(false);
 
-      // course_id is required here now — progress rows are scoped per
-      // course so they stay correct once a second course exists.
       const { data: existing } = await supabase
         .from("progress")
         .select("chapter_number")
@@ -186,7 +185,7 @@ export default function ChapterReaderPage() {
           <div className="mt-6 overflow-hidden rounded-2xl border border-border shadow-sm">
             <div className="aspect-video w-full">
               <iframe
-                src={chapter.video_url}
+                src={toYoutubeEmbedUrl(chapter.video_url)}
                 className="h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -234,4 +233,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-          }
+}
