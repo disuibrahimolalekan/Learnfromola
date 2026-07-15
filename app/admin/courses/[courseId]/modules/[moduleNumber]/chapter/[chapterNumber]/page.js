@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import MarkdownToolbar from "@/components/admin/MarkdownToolbar";
+import ContentPreview from "@/components/admin/ContentPreview";
 
 export default function AdminChapterEditPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function AdminChapterEditPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [mode, setMode] = useState("edit"); // "edit" | "preview"
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -135,30 +137,47 @@ export default function AdminChapterEditPage() {
             placeholder="https://youtube.com/..."
             className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           />
+        </div>
 
-          <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
+        <div className="mt-4">
+          <label className="mb-1 block text-sm font-medium text-text-primary">
             Chapter Content
           </label>
-          <MarkdownToolbar
-            textareaRef={contentTextareaRef}
-            value={content}
-            onChange={setContent}
-          />
-          <textarea
-            ref={contentTextareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={20}
-            className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
-          >
-            {saving ? "Saving…" : "Save Chapter"}
-          </button>
+          {mode === "edit" ? (
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <MarkdownToolbar
+                textareaRef={contentTextareaRef}
+                value={content}
+                onChange={setContent}
+              />
+              <textarea
+                ref={contentTextareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={20}
+                className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 font-mono text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+          ) : (
+            <ContentPreview content={content} isChapter />
+          )}
+
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => setMode(mode === "edit" ? "preview" : "edit")}
+              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+            >
+              {mode === "edit" ? "Preview" : "← Back to Edit"}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save Chapter"}
+            </button>
+          </div>
           {saveMessage && (
             <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
           )}
@@ -182,4 +201,4 @@ export default function AdminChapterEditPage() {
       </div>
     </div>
   );
-  }
+    }
