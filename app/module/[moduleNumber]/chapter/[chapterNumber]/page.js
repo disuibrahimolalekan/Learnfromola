@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabaseClient";
 import { formatQuotes } from "@/lib/formatContent";
 import { getCurrentCourseId } from "@/lib/currentCourse";
 import { toYoutubeEmbedUrl } from "@/lib/youtube";
+import MarkdownContent from "@/components/MarkdownContent";
 import FlowChart from "@/components/ui/FlowChart";
 
 function stripQuiz(content) {
@@ -195,7 +195,7 @@ export default function ChapterReaderPage() {
         )}
 
         <div className="markdown-content mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <ReactMarkdown>{displayContent}</ReactMarkdown>
+          <MarkdownContent>{displayContent}</MarkdownContent>
         </div>
       </div>
 
@@ -233,4 +233,4 @@ export default function ChapterReaderPage() {
       </div>
     </div>
   );
-}
+              }
