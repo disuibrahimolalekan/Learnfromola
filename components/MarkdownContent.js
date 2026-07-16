@@ -1,14 +1,17 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { isYoutubeUrl, toYoutubeEmbedUrl } from "@/lib/youtube";
 
-// A YouTube link typed via the 🔗 tool (anywhere in the content, not just
-// the dedicated Video Link field) renders as a real playable embed here.
-// Anything else renders as a normal clickable brand-colored link.
+// rehypeRaw lets the large-text and alignment features (which are saved
+// as small inline HTML snippets) actually render, instead of showing up
+// as literal text. Bold, italic, lists, images, links, quotes are all
+// unaffected — those still save as plain, clean markdown.
 export default function MarkdownContent({ children }) {
   return (
     <ReactMarkdown
+      rehypePlugins={[rehypeRaw]}
       components={{
         a: ({ href, children: linkChildren }) => {
           if (isYoutubeUrl(href)) {
@@ -41,4 +44,4 @@ export default function MarkdownContent({ children }) {
       {children}
     </ReactMarkdown>
   );
-                }
+}
