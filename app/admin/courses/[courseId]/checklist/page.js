@@ -16,7 +16,8 @@ export default function AdminChecklistEditPage() {
   const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [mode, setMode] = useState("edit");
+  const [viewMode, setViewMode] = useState("read");
+  const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -67,8 +68,15 @@ export default function AdminChecklistEditPage() {
       );
 
     setSaving(false);
-    if (!error) setContent(cleanContent);
-    setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
+
+    if (error) {
+      setSaveMessage(`Error: ${error.message}`);
+      return;
+    }
+
+    setContent(cleanContent);
+    setExpanded(false);
+    setViewMode("read");
   }
 
   if (checking) {
@@ -78,6 +86,8 @@ export default function AdminChecklistEditPage() {
       </div>
     );
   }
+
+  const previewNode = <ContentPreview title={title} content={content} />;
 
   return (
     <div className="min-h-screen bg-bg pb-16">
@@ -89,55 +99,128 @@ export default function AdminChecklistEditPage() {
           ← Manage Content
         </Link>
 
-        <h1 className="mt-4 font-display text-2xl font-bold text-text-primary">
-          Edit Checklist Page
-        </h1>
-
-        {mode === "edit" && (
-          <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <label className="mb-1 block text-sm font-medium text-text-primary">
-              Page Title
-            </label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-          </div>
+        {viewMode === "read" && (
+          <>
+            {previewNode}
+            <button
+              onClick={() => setViewMode("edit")}
+              className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+            >
+              Edit Content
+            </button>
+          </>
         )}
 
-        <div className="mt-4">
-          {mode === "edit" ? (
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <label className="mb-1 block text-sm font-medium text-text-primary">
-                Content
-              </label>
-              <RichTextEditor value={content} onChange={setContent} />
+        {viewMode === "preview" && (
+          <>
+            {previewNode}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setViewMode("edit")}
+                className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+              >
+                ← Back to Edit
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+              >
+                {saving ? "Saving…" : "Save Page"}
+              </button>
             </div>
-          ) : (
-            <ContentPreview title={title} content={content} />
-          )}
+          </>
+        )}
 
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => setMode(mode === "edit" ? "preview" : "edit")}
-              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
-            >
-              {mode === "edit" ? "Preview" : "← Back to Edit"}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save Page"}
-            </button>
-          </div>
-          {saveMessage && (
-            <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
-          )}
-        </div>
+        {viewMode === "edit" && (
+          <>
+            {!expanded && (
+              <>
+                <h1 className="mt-4 font-display text-2xl font-bold text-text-primary">
+                  Edit Checklist Page
+                </h1>
+
+                <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+                  <label className="mb-1 block text-sm font-medium text-text-primary">
+                    Page Title
+                  </label>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className={expanded ? "" : "mt-4"}>
+              {!expanded && (
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+                  <label className="mb-1 block text-sm font-medium text-text-primary">
+                    Content
+                  </label>
+                  <RichTextEditor
+                    value={content}
+                    onChange={setContent}
+                    expanded={expanded}
+                    onToggleExpand={() => setExpanded(true)}
+                  />
+                </div>
+              )}
+
+              {expanded && (
+                <RichTextEditor
+                  value={content}
+                  onChange={setContent}
+                  expanded={expanded}
+                  onToggleExpand={() => setExpanded(false)}
+                  footer={
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setExpanded(false);
+                          setViewMode("preview");
+                        }}
+                        className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+                      >
+                        {saving ? "Saving…" : "Save Page"}
+                      </button>
+                    </div>
+                  }
+                />
+              )}
+
+              {!expanded && (
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => setViewMode("preview")}
+                    className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+                  >
+                    {saving ? "Saving…" : "Save Page"}
+                  </button>
+                </div>
+              )}
+              {saveMessage && (
+                <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
-      }
+                  }
