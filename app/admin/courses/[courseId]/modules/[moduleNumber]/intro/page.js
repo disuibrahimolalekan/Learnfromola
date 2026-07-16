@@ -18,7 +18,8 @@ export default function ModuleIntroEditPage() {
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [introContent, setIntroContent] = useState("");
-  const [mode, setMode] = useState("edit");
+  const [viewMode, setViewMode] = useState("read");
+  const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -67,8 +68,15 @@ export default function ModuleIntroEditPage() {
       .eq("course_id", courseId)
       .eq("number", moduleNumber);
     setSaving(false);
-    if (!error) setIntroContent(cleanContent);
-    setSaveMessage(error ? `Error: ${error.message}` : "Saved successfully.");
+
+    if (error) {
+      setSaveMessage(`Error: ${error.message}`);
+      return;
+    }
+
+    setIntroContent(cleanContent);
+    setExpanded(false);
+    setViewMode("read");
   }
 
   if (checking) {
@@ -78,6 +86,15 @@ export default function ModuleIntroEditPage() {
       </div>
     );
   }
+
+  const previewNode = (
+    <ContentPreview
+      eyebrow={`Module ${moduleNumber}`}
+      title={title}
+      videoUrl={videoUrl}
+      content={introContent}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-bg pb-16">
@@ -89,70 +106,138 @@ export default function ModuleIntroEditPage() {
           ← Module {moduleNumber}
         </Link>
 
-        <h1 className="mt-4 font-display text-2xl font-bold text-text-primary">
-          Module Introduction
-        </h1>
-
-        {mode === "edit" && (
-          <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <label className="mb-1 block text-sm font-medium text-text-primary">
-              Module Title
-            </label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-
-            <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
-              Video Link (optional)
-            </label>
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://youtube.com/..."
-              className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-          </div>
+        {viewMode === "read" && (
+          <>
+            {previewNode}
+            <button
+              onClick={() => setViewMode("edit")}
+              className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+            >
+              Edit Content
+            </button>
+          </>
         )}
 
-        <div className="mt-4">
-          {mode === "edit" ? (
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <label className="mb-1 block text-sm font-medium text-text-primary">
-                Content
-              </label>
-              <RichTextEditor value={introContent} onChange={setIntroContent} />
+        {viewMode === "preview" && (
+          <>
+            {previewNode}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setViewMode("edit")}
+                className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+              >
+                ← Back to Edit
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+              >
+                {saving ? "Saving…" : "Save Introduction"}
+              </button>
             </div>
-          ) : (
-            <ContentPreview
-              eyebrow={`Module ${moduleNumber}`}
-              title={title}
-              videoUrl={videoUrl}
-              content={introContent}
-            />
-          )}
+          </>
+        )}
 
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => setMode(mode === "edit" ? "preview" : "edit")}
-              className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
-            >
-              {mode === "edit" ? "Preview" : "← Back to Edit"}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save Introduction"}
-            </button>
-          </div>
-          {saveMessage && (
-            <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
-          )}
-        </div>
+        {viewMode === "edit" && (
+          <>
+            {!expanded && (
+              <>
+                <h1 className="mt-4 font-display text-2xl font-bold text-text-primary">
+                  Module Introduction
+                </h1>
+
+                <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+                  <label className="mb-1 block text-sm font-medium text-text-primary">
+                    Module Title
+                  </label>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  />
+
+                  <label className="mb-1 mt-5 block text-sm font-medium text-text-primary">
+                    Video Link (optional)
+                  </label>
+                  <input
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="https://youtube.com/..."
+                    className="w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className={expanded ? "" : "mt-4"}>
+              {!expanded && (
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+                  <label className="mb-1 block text-sm font-medium text-text-primary">
+                    Content
+                  </label>
+                  <RichTextEditor
+                    value={introContent}
+                    onChange={setIntroContent}
+                    expanded={expanded}
+                    onToggleExpand={() => setExpanded(true)}
+                  />
+                </div>
+              )}
+
+              {expanded && (
+                <RichTextEditor
+                  value={introContent}
+                  onChange={setIntroContent}
+                  expanded={expanded}
+                  onToggleExpand={() => setExpanded(false)}
+                  footer={
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setExpanded(false);
+                          setViewMode("preview");
+                        }}
+                        className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+                      >
+                        {saving ? "Saving…" : "Save Introduction"}
+                      </button>
+                    </div>
+                  }
+                />
+              )}
+
+              {!expanded && (
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => setViewMode("preview")}
+                    className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+                  >
+                    {saving ? "Saving…" : "Save Introduction"}
+                  </button>
+                </div>
+              )}
+              {saveMessage && (
+                <p className="mt-2 text-sm text-text-secondary">{saveMessage}</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
-           }
+                  }
