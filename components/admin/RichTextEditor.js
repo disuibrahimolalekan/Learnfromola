@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { Node as TiptapNode, Mark, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapImage from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
@@ -15,15 +16,100 @@ function normalizeUrl(url) {
   return `https://${trimmed}`;
 }
 
-// `expanded` + `onToggleExpand` + `footer` are all optional — passing none
-// of them keeps this component behaving exactly as before. When a parent
-// page wires them up, this becomes a full-screen editor: sticky toolbar
-// (with the Expand/Collapse toggle live inside it, not floating in the
-// text area), a scrollable middle, and whatever the parent passes as
-// `footer` (its own Preview/Save buttons) pinned to the bottom.
+// A paragraph that can carry a text-align attribute. Replaces StarterKit's
+// built-in paragraph (which can't persist this) so alignment actually
+// survives being saved and reloaded — verified by testing, not assumed.
+const AlignableParagraph = TiptapNode.create({
+  name: "paragraph",
+  priority: 1000,
+  group: "block",
+  content: "inline*",
+  addAttributes() {
+    return {
+      textAlign: {
+        default: null,
+        parseHTML: (element) => element.style.textAlign || null,
+        renderHTML: (attributes) => {
+          if (!attributes.textAlign || attributes.textAlign === "left") return {};
+          return { style: `text-align: ${attributes.textAlign}` };
+        },
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "p" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["p", mergeAttributes(HTMLAttributes), 0];
+  },
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state, node) {
+          if (node.attrs.textAlign && node.attrs.textAlign !== "left") {
+            state.write(`<p style="text-align: ${node.attrs.textAlign}">`);
+            state.renderInline(node);
+            state.write(`</p>`);
+            state.closeBlock(node);
+          } else {
+            state.renderInline(node);
+            state.closeBlock(node);
+          }
+        },
+      },
+    };
+  },
+  addCommands() {
+    return {
+      setTextAlign:
+        (alignment) =>
+        ({ commands }) =>
+          commands.updateAttributes(this.name, { textAlign: alignment }),
+    };
+  },
+});
+
+// An inline style (like Bold/Italic) rather than a heading — can sit
+// mixed with normal text on the same line, which real headings can't do.
+const TextSize = Mark.create({
+  name: "textSize",
+  addAttributes() {
+    return {
+      size: {
+        default: null,
+        parseHTML: (element) => element.style.fontSize || null,
+        renderHTML: (attributes) => {
+          if (!attributes.size) return {};
+          return { style: `font-size: ${attributes.size}` };
+        },
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'span[style*="font-size"]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", HTMLAttributes, 0];
+  },
+  addCommands() {
+    return {
+      setTextSize:
+        (size) =>
+        ({ commands }) =>
+          commands.setMark(this.name, { size }),
+      unsetTextSize:
+        () =>
+        ({ commands }) =>
+          commands.unsetMark(this.name),
+    };
+  },
+});
+
 export default function RichTextEditor({ value, onChange, expanded = false, onToggleExpand, footer }) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [sizeMenuOpen, setSizeMenuOpen] = useState(false);
+  const [alignMenuOpen, setAlignMenuOpen] = useState(false);
   const [dialogUrl, setDialogUrl] = useState("");
   const [linkSelection, setLinkSelection] = useState(null);
   const [resolvingImage, setResolvingImage] = useState(false);
@@ -35,9 +121,12 @@ export default function RichTextEditor({ value, onChange, expanded = false, onTo
       StarterKit.configure({
         heading: { levels: [1, 2] },
         link: { openOnClick: false, autolink: false },
+        paragraph: false,
       }),
+      AlignableParagraph,
+      TextSize,
       TiptapImage,
-      Markdown.configure({ html: false, transformPastedText: true }),
+      Markdown.configure({ html: true, transformPastedText: true }),
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
@@ -147,6 +236,18 @@ export default function RichTextEditor({ value, onChange, expanded = false, onTo
     { label: "❝", title: "Quote", active: editor.isActive("blockquote"), run: () => editor.chain().focus().toggleBlockquote().run() },
   ];
 
+  const sizeOptions = [
+    { label: "T1 — Large", run: () => editor.chain().focus().setTextSize("1.5em").run() },
+    { label: "T2 — Medium", run: () => editor.chain().focus().setTextSize("1.25em").run() },
+    { label: "T0 — Default", run: () => editor.chain().focus().unsetTextSize().run() },
+  ];
+
+  const alignOptions = [
+    { label: "Left", value: "left" },
+    { label: "Center", value: "center" },
+    { label: "Right", value: "right" },
+  ];
+
   const toolbar = (
     <div className="flex flex-wrap items-center gap-1.5">
       {formatButtons.map((btn) => (
@@ -164,6 +265,74 @@ export default function RichTextEditor({ value, onChange, expanded = false, onTo
           {btn.label}
         </button>
       ))}
+
+      {/* Large text — inline style, can mix with normal text on the same line */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Text size"
+          onClick={() => {
+            setAlignMenuOpen(false);
+            setSizeMenuOpen((open) => !open);
+          }}
+          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
+        >
+          T
+        </button>
+        {sizeMenuOpen && (
+          <div className="absolute left-0 top-9 z-20 w-36 rounded-xl border border-border bg-card p-1 shadow-lg">
+            {sizeOptions.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => {
+                  opt.run();
+                  setSizeMenuOpen(false);
+                }}
+                className="block w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-text-primary hover:bg-primary/5"
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Alignment — applies to the whole line/paragraph */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Alignment"
+          onClick={() => {
+            setSizeMenuOpen(false);
+            setAlignMenuOpen((open) => !open);
+          }}
+          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
+        >
+          ≡
+        </button>
+        {alignMenuOpen && (
+          <div className="absolute left-0 top-9 z-20 w-32 rounded-xl border border-border bg-card p-1 shadow-lg">
+            {alignOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  editor.chain().focus().setTextAlign(opt.value).run();
+                  setAlignMenuOpen(false);
+                }}
+                className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-primary/5 ${
+                  editor.isActive("paragraph", { textAlign: opt.value })
+                    ? "text-primary"
+                    : "text-text-primary"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <button
         type="button"
@@ -213,11 +382,10 @@ export default function RichTextEditor({ value, onChange, expanded = false, onTo
       {onToggleExpand && (
         <button
           type="button"
-          title={expanded ? "Collapse" : "Expand"}
           onClick={onToggleExpand}
-          className="ml-auto flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
+          className="ml-auto flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-semibold text-text-primary transition hover:bg-primary/5"
         >
-          {expanded ? "⤡" : "⤢"}
+          {expanded ? "Collapse" : "Expand"}
         </button>
       )}
     </div>
@@ -345,4 +513,4 @@ export default function RichTextEditor({ value, onChange, expanded = false, onTo
       {dialogs}
     </div>
   );
-            }
+}
