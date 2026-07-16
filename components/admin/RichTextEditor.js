@@ -15,7 +15,13 @@ function normalizeUrl(url) {
   return `https://${trimmed}`;
 }
 
-export default function RichTextEditor({ value, onChange }) {
+// `expanded` + `onToggleExpand` + `footer` are all optional — passing none
+// of them keeps this component behaving exactly as before. When a parent
+// page wires them up, this becomes a full-screen editor: sticky toolbar
+// (with the Expand/Collapse toggle live inside it, not floating in the
+// text area), a scrollable middle, and whatever the parent passes as
+// `footer` (its own Preview/Save buttons) pinned to the bottom.
+export default function RichTextEditor({ value, onChange, expanded = false, onToggleExpand, footer }) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [dialogUrl, setDialogUrl] = useState("");
@@ -39,7 +45,9 @@ export default function RichTextEditor({ value, onChange }) {
     },
     editorProps: {
       attributes: {
-        class: "markdown-content min-h-[240px] focus:outline-none",
+        class: expanded
+          ? "markdown-content focus:outline-none"
+          : "markdown-content min-h-[240px] focus:outline-none",
       },
     },
   });
@@ -91,11 +99,6 @@ export default function RichTextEditor({ value, onChange }) {
   async function handleInsertImage() {
     if (!dialogUrl.trim()) return;
     const rawUrl = normalizeUrl(dialogUrl);
-
-    // Only ImgBB's viewer-page links (ibb.co/xxxx — no "i.") ever need
-    // resolving. Direct links (i.ibb.co/... or any other image host) are
-    // used immediately with zero network calls, so a resolver hiccup can
-    // never block a link that was already correct.
     const needsResolving = /^https?:\/\/ibb\.co\//i.test(rawUrl);
 
     if (!needsResolving) {
@@ -144,78 +147,87 @@ export default function RichTextEditor({ value, onChange }) {
     { label: "❝", title: "Quote", active: editor.isActive("blockquote"), run: () => editor.chain().focus().toggleBlockquote().run() },
   ];
 
-  return (
-    <div>
-      <div className="mb-2 flex flex-wrap gap-1.5">
-        {formatButtons.map((btn) => (
-          <button
-            key={btn.title}
-            type="button"
-            title={btn.title}
-            onClick={btn.run}
-            className={`flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm transition ${
-              btn.active
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card text-text-primary hover:bg-primary/5"
-            } ${btn.className || ""}`}
-          >
-            {btn.label}
-          </button>
-        ))}
-
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {formatButtons.map((btn) => (
         <button
+          key={btn.title}
           type="button"
-          title="Link or YouTube video"
-          onClick={openLinkDialog}
+          title={btn.title}
+          onClick={btn.run}
           className={`flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm transition ${
-            editor.isActive("link")
+            btn.active
               ? "border-primary bg-primary/10 text-primary"
               : "border-border bg-card text-text-primary hover:bg-primary/5"
-          }`}
+          } ${btn.className || ""}`}
         >
-          🔗
+          {btn.label}
         </button>
+      ))}
 
+      <button
+        type="button"
+        title="Link or YouTube video"
+        onClick={openLinkDialog}
+        className={`flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm transition ${
+          editor.isActive("link")
+            ? "border-primary bg-primary/10 text-primary"
+            : "border-border bg-card text-text-primary hover:bg-primary/5"
+        }`}
+      >
+        🔗
+      </button>
+
+      <button
+        type="button"
+        title="Image"
+        onClick={() => {
+          setDialogUrl("");
+          setImageError("");
+          setImageDialogOpen(true);
+        }}
+        className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
+      >
+        🖼
+      </button>
+
+      <button
+        type="button"
+        title="Undo"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.can().undo()}
+        className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5 disabled:opacity-40"
+      >
+        ↶
+      </button>
+      <button
+        type="button"
+        title="Redo"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.can().redo()}
+        className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5 disabled:opacity-40"
+      >
+        ↷
+      </button>
+
+      {onToggleExpand && (
         <button
           type="button"
-          title="Image"
-          onClick={() => {
-            setDialogUrl("");
-            setImageError("");
-            setImageDialogOpen(true);
-          }}
-          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
+          title={expanded ? "Collapse" : "Expand"}
+          onClick={onToggleExpand}
+          className="ml-auto flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5"
         >
-          🖼
+          {expanded ? "⤡" : "⤢"}
         </button>
+      )}
+    </div>
+  );
 
-        <button
-          type="button"
-          title="Undo"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5 disabled:opacity-40"
-        >
-          ↶
-        </button>
-        <button
-          type="button"
-          title="Redo"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-sm text-text-primary transition hover:bg-primary/5 disabled:opacity-40"
-        >
-          ↷
-        </button>
-      </div>
-
-      <div className="rounded-xl border border-border bg-bg px-4 py-3">
-        <EditorContent editor={editor} />
-      </div>
-
+  const dialogs = (
+    <>
       {linkDialogOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center"
           onClick={() => setLinkDialogOpen(false)}
         >
           <div
@@ -255,7 +267,7 @@ export default function RichTextEditor({ value, onChange }) {
 
       {imageDialogOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center"
           onClick={() => !resolvingImage && setImageDialogOpen(false)}
         >
           <div
@@ -302,6 +314,35 @@ export default function RichTextEditor({ value, onChange }) {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (expanded) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-bg">
+        <div className="flex-shrink-0 border-b border-border bg-card px-3 py-2">
+          {toolbar}
+        </div>
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          <EditorContent editor={editor} />
+        </div>
+        {footer && (
+          <div className="flex-shrink-0 border-t border-border bg-card px-3 py-3">
+            {footer}
+          </div>
+        )}
+        {dialogs}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-2">{toolbar}</div>
+      <div className="rounded-xl border border-border bg-bg px-4 py-3">
+        <EditorContent editor={editor} />
+      </div>
+      {dialogs}
     </div>
   );
             }
