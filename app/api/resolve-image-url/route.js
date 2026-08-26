@@ -1,3 +1,18 @@
+// Allowlist of domains that can be fetched server-side
+const ALLOWED_DOMAINS = ['ibb.co', 'i.ibb.co'];
+
+function isAllowedUrl(input) {
+  try {
+    const parsed = new URL(input);
+    // Must be http or https
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    // Must be in allowlist
+    return ALLOWED_DOMAINS.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url");
@@ -6,8 +21,9 @@ export async function GET(request) {
     return Response.json({ error: "Missing url" }, { status: 400 });
   }
 
-  if (!/^https?:\/\/ibb\.co\//i.test(url)) {
-    return Response.json({ url, resolved: true });
+  // SSRF prevention: only allow URLs from trusted domains
+  if (!isAllowedUrl(url)) {
+    return Response.json({ error: "URL domain not allowed" }, { status: 403 });
   }
 
   try {

@@ -2,16 +2,37 @@
 
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { isYoutubeUrl, toYoutubeEmbedUrl } from "@/lib/youtube";
 
-// rehypeRaw lets the large-text and alignment features (which are saved
-// as small inline HTML snippets) actually render, instead of showing up
-// as literal text. Bold, italic, lists, images, links, quotes are all
-// unaffected — those still save as plain, clean markdown.
+// Allowed HTML tags and attributes for sanitized output.
+// This prevents XSS while still allowing safe formatting (bold, italic,
+// lists, images, links, quotes, and inline styles for alignment/size).
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [
+    ...(defaultSchema.tagNames || []),
+    // Allow common formatting tags
+    'p', 'br', 'strong', 'em', 'blockquote', 'img', 'a', 'ul', 'ol', 'li',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'code', 'pre',
+    'hr', 'del', 'ins', 'sub', 'sup', 'mark',
+  ],
+  attributes: {
+    ...defaultSchema.attributes,
+    '*': ['style', 'className'],
+    a: [...(defaultSchema.attributes?.a || []), 'target', 'rel'],
+    img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'title'],
+  },
+  // Strip dangerous tags entirely
+  strip: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'svg', 'math'],
+};
+
+// rehypeRaw + rehypeSanitize lets safe formatting HTML render while
+// stripping dangerous tags like <script>, <iframe>, etc.
 export default function MarkdownContent({ children }) {
   return (
     <ReactMarkdown
-      rehypePlugins={[rehypeRaw]}
+      rehypePlugins={[[rehypeSanitize, sanitizeSchema], rehypeRaw]}
       components={{
         a: ({ href, children: linkChildren }) => {
           if (isYoutubeUrl(href)) {

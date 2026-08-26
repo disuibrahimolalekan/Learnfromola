@@ -1,5 +1,31 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+/**
+ * Verify Selar webhook signature using HMAC-SHA256.
+ * Selar sends the signature in the 'X-Selar-Signature' header.
+ * Falls back to query param secret for backward compatibility.
+ */
+function verifyWebhookSignature(rawBody, signature) {
+  const secret = process.env.SELAR_WEBHOOK_SECRET;
+  if (!secret) return false;
+
+  // Prefer HMAC signature from header
+  if (signature) {
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody)
+      .digest("hex");
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expected)
+    );
+  }
+
+  // Fallback: query param secret (less secure, deprecated)
+  return false;
+}
 
 function extractBuyerEmail(body) {
   return (
@@ -41,17 +67,25 @@ function extractProductCode(body) {
 }
 
 export async function POST(request) {
-  const { searchParams } = new URL(request.url);
-  const providedSecret = searchParams.get("secret");
-  const expectedSecret = process.env.SELAR_WEBHOOK_SECRET;
+  const signature = request.headers.get("x-selar-signature");
 
-  if (!expectedSecret || providedSecret !== expectedSecret) {
+  // Read raw body first (needed for HMAC verification)
+  const rawBody = await request.text().catch(() => "");
+
+  // Verify signature (HMAC preferred, query param fallback disabled for security)
+  if (!verifyWebhookSignature(rawBody, signature)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null);
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+  }
 
-  if (!body) {
+  // Parse JSON from raw body
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 

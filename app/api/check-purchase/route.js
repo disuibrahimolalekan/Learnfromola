@@ -8,6 +8,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 const COURSE_SLUG = "ai-software-builder";
 
 export async function POST(request) {
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+  }
+
   const body = await request.json().catch(() => null);
   const email = body?.email?.trim().toLowerCase();
 
