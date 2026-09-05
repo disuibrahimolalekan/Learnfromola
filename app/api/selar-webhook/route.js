@@ -5,26 +5,41 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 /**
  * Verify Selar webhook signature using HMAC-SHA256.
  * Selar sends the signature in the 'X-Selar-Signature' header.
- * Falls back to query param secret for backward compatibility.
+ * This is for calls coming directly from Selar in the future.
  */
-function verifyWebhookSignature(rawBody, signature) {
+function verifyHmacSignature(rawBody, signature) {
   const secret = process.env.SELAR_WEBHOOK_SECRET;
-  if (!secret) return false;
+  if (!secret || !signature) return false;
 
-  // Prefer HMAC signature from header
-  if (signature) {
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody)
-      .digest("hex");
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expected)
-    );
-  }
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
 
-  // Fallback: query param secret (less secure, deprecated)
-  return false;
+  // Buffers must be equal length or timingSafeEqual throws, so guard first.
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length) return false;
+
+  return crypto.timingSafeEqual(sigBuf, expBuf);
+}
+
+/**
+ * Verify shared-secret query param.
+ * This is the auth method used by the Google Apps Script relay, which
+ * reads new rows from the purchases Sheet and forwards them here — it's
+ * not Selar itself calling us, so it can't produce a real Selar HMAC.
+ */
+function verifyQuerySecret(request) {
+  const secret = process.env.SELAR_WEBHOOK_SECRET;
+  const provided = request.nextUrl.searchParams.get("secret");
+  if (!secret || !provided) return false;
+
+  const secretBuf = Buffer.from(secret);
+  const providedBuf = Buffer.from(provided);
+  if (secretBuf.length !== providedBuf.length) return false;
+
+  return crypto.timingSafeEqual(secretBuf, providedBuf);
 }
 
 function extractBuyerEmail(body) {
@@ -72,8 +87,13 @@ export async function POST(request) {
   // Read raw body first (needed for HMAC verification)
   const rawBody = await request.text().catch(() => "");
 
-  // Verify signature (HMAC preferred, query param fallback disabled for security)
-  if (!verifyWebhookSignature(rawBody, signature)) {
+  // Accept either a valid Selar HMAC signature OR a valid shared-secret
+  // query param. The query param covers the Sheets relay path; HMAC
+  // covers a possible future direct-from-Selar path.
+  const isAuthorized =
+    verifyHmacSignature(rawBody, signature) || verifyQuerySecret(request);
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
