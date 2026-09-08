@@ -5,11 +5,20 @@ import { useEffect, useState } from "react";
 // A bottom toast that counts down from 30 seconds. Tapping Undo restores
 // the deleted item; letting it expire means it's gone for good.
 export default function UndoToast({ message, expiresAt, onUndo, onExpire }) {
-  const [secondsLeft, setSecondsLeft] = useState(
-    Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000))
-  );
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   useEffect(() => {
+    const updateRemaining = () => {
+      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      return remaining;
+    };
+
+    if (updateRemaining() <= 0) {
+      onExpire();
+      return undefined;
+    }
+
     const interval = setInterval(() => {
       const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
       setSecondsLeft(remaining);
