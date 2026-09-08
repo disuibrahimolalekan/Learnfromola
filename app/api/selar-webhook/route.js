@@ -5,9 +5,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 /**
  * Verify Selar webhook signature using HMAC-SHA256.
  * Selar sends the signature in the 'X-Selar-Signature' header.
- * Falls back to query param secret for backward compatibility.
+ * This is for calls coming directly from Selar in the future.
  */
-function verifyWebhookSignature(rawBody, signature) {
+function verifyHmacSignature(rawBody, signature) {
   const secret = process.env.SELAR_WEBHOOK_SECRET;
   if (!secret || typeof signature !== "string") return false;
 
@@ -23,6 +23,24 @@ function verifyWebhookSignature(rawBody, signature) {
     provided.length === expectedBuffer.length &&
     crypto.timingSafeEqual(provided, expectedBuffer)
   );
+}
+
+/**
+ * Verify shared-secret query param.
+ * This is the auth method used by the Google Apps Script relay, which
+ * reads new rows from the purchases Sheet and forwards them here — it's
+ * not Selar itself calling us, so it can't produce a real Selar HMAC.
+ */
+function verifyQuerySecret(request) {
+  const secret = process.env.SELAR_WEBHOOK_SECRET;
+  const provided = request.nextUrl.searchParams.get("secret");
+  if (!secret || typeof provided !== "string") return false;
+
+  const secretBuf = Buffer.from(secret.trim());
+  const providedBuf = Buffer.from(provided.trim());
+  if (!secretBuf.length || secretBuf.length !== providedBuf.length) return false;
+
+  return crypto.timingSafeEqual(secretBuf, providedBuf);
 }
 
 function extractBuyerEmail(body) {
@@ -75,8 +93,13 @@ export async function POST(request) {
   // Read raw body first (needed for HMAC verification)
   const rawBody = await request.text().catch(() => "");
 
-  // Verify signature (HMAC preferred, query param fallback disabled for security)
-  if (!verifyWebhookSignature(rawBody, signature)) {
+  // Accept either a valid Selar HMAC signature OR a valid shared-secret
+  // query param. The query param covers the Sheets relay path; HMAC
+  // covers a possible future direct-from-Selar path.
+  const isAuthorized =
+    verifyHmacSignature(rawBody, signature) || verifyQuerySecret(request);
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
