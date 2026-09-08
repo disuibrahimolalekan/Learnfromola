@@ -81,25 +81,17 @@ export default function ChapterReaderPage() {
       );
       setChecking(false);
 
-      const { data: existing } = await supabase
-        .from("progress")
-        .select("chapter_number")
-        .eq("user_id", session.user.id)
-        .eq("course_id", courseId)
-        .eq("module_number", moduleNumber)
-        .eq("chapter_number", chapterNumber)
-        .maybeSingle();
-
-      if (!existing) {
-        const { error: insertError } = await supabase.from("progress").insert({
+      const { error: progressError } = await supabase.from("progress").upsert(
+        {
           user_id: session.user.id,
           course_id: courseId,
           module_number: moduleNumber,
           chapter_number: chapterNumber,
-        });
-        if (insertError) {
-          console.error("Failed to save progress:", insertError.message);
-        }
+        },
+        { onConflict: "user_id,course_id,module_number,chapter_number", ignoreDuplicates: true }
+      );
+      if (progressError) {
+        console.error("Failed to save progress:", progressError.message);
       }
     }
 
