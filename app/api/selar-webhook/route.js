@@ -9,22 +9,20 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
  */
 function verifyWebhookSignature(rawBody, signature) {
   const secret = process.env.SELAR_WEBHOOK_SECRET;
-  if (!secret) return false;
+  if (!secret || typeof signature !== "string") return false;
 
-  // Prefer HMAC signature from header
-  if (signature) {
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody)
-      .digest("hex");
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expected)
-    );
-  }
+  const normalizedSignature = signature.trim().toLowerCase();
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  const provided = Buffer.from(normalizedSignature, "hex");
+  const expectedBuffer = Buffer.from(expected, "hex");
 
-  // Fallback: query param secret (less secure, deprecated)
-  return false;
+  return (
+    provided.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(provided, expectedBuffer)
+  );
 }
 
 function extractBuyerEmail(body) {
@@ -67,6 +65,11 @@ function extractProductCode(body) {
 }
 
 export async function POST(request) {
+  if (!process.env.SELAR_WEBHOOK_SECRET) {
+    console.error("Selar webhook is not configured: SELAR_WEBHOOK_SECRET is missing.");
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+  }
+
   const signature = request.headers.get("x-selar-signature");
 
   // Read raw body first (needed for HMAC verification)
@@ -145,10 +148,16 @@ export async function POST(request) {
   });
 
   if (error) {
+    // The database unique constraint makes Selar retries idempotent. Treat a
+    // duplicate as successfully received so Selar does not keep retrying it.
+    if (error.code === "23505") {
+      console.log(`Duplicate purchase webhook acknowledged for ${email}`);
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
     console.error("Failed to record purchase:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  console.log(`Purchase recorded for course "${course.name}" (${email})`);
+  console.log(`Purchase recorded for course "${course.name}"`);
   return NextResponse.json({ received: true }, { status: 200 });
 }
