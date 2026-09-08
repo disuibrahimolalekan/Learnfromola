@@ -28,7 +28,7 @@ export default function CreateAccountPage() {
     if (!isRequired(password)) next.password = "Create a password.";
     else if (!isValidPassword(password))
       next.password =
-        "Password needs 6+ characters, an uppercase letter, a number, and a special character.";
+        "Password needs 8+ characters, an uppercase letter, a number, and a special character.";
 
     if (!isRequired(confirmPassword)) next.confirmPassword = "Confirm your password.";
     else if (confirmPassword !== password) next.confirmPassword = "Passwords don't match.";
@@ -44,38 +44,32 @@ export default function CreateAccountPage() {
 
     setLoading(true);
 
-    const checkResponse = await fetch("/api/check-purchase", {
+    const response = await fetch("/api/create-account", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim() }),
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+        fullName: fullName.trim(),
+      }),
     });
+    const result = await response.json().catch(() => null);
 
-    const checkResult = await checkResponse.json().catch(() => null);
+    setLoading(false);
 
-    if (!checkResult?.purchased) {
-      setLoading(false);
+    if (!response.ok) {
       setErrors({
-        email: "We couldn't find a purchase with this email. Use the same email you bought the course with.",
+        email: result?.error || "Something went wrong. Please try again.",
       });
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { error: loginError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
-      options: {
-        data: { full_name: fullName.trim() },
-      },
     });
-
-    setLoading(false);
-
-    if (error) {
-      if (error.message.toLowerCase().includes("already registered")) {
-        setErrors({ email: "An account with this email already exists." });
-      } else {
-        setErrors({ email: "Something went wrong. Please try again." });
-      }
+    if (loginError) {
+      setErrors({ email: "Account created. Please log in to continue." });
       return;
     }
 
@@ -120,7 +114,7 @@ export default function CreateAccountPage() {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters"
           error={errors.password}
         />
         <PasswordChecklist password={password} />
