@@ -6,6 +6,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getModules } from "@/lib/courseStructure";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { isValidPassword } from "@/lib/validators";
+import { getCurrentCourseId } from "@/lib/currentCourse";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -37,12 +39,19 @@ export default function DashboardPage() {
 
       setFullName(session.user.user_metadata?.full_name || "");
 
+      const courseId = await getCurrentCourseId();
+      if (!courseId) {
+        setChecking(false);
+        return;
+      }
+
       const [modulesList, progressResult, checklistPage] = await Promise.all([
         getModules(),
         supabase
           .from("progress")
           .select("module_number, chapter_number")
-          .eq("user_id", session.user.id),
+          .eq("user_id", session.user.id)
+          .eq("course_id", courseId),
         supabase.from("pages").select("title").eq("slug", "checklist").maybeSingle(),
       ]);
 
@@ -88,8 +97,10 @@ export default function DashboardPage() {
     setResetError("");
     setResetSuccess(false);
 
-    if (newPassword.length < 8) {
-      setResetError("Password must be at least 8 characters.");
+    if (!isValidPassword(newPassword)) {
+      setResetError(
+        "Password needs 8+ characters, an uppercase letter, a number, and a special character."
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -131,11 +142,12 @@ export default function DashboardPage() {
   for (const mod of modules) {
     const completedSet = completedByModule[mod.number] || new Set();
     if (completedSet.size < mod.chapterCount) {
-      let nextChapter = 1;
-      while (completedSet.has(nextChapter) && nextChapter <= mod.chapterCount) {
-        nextChapter += 1;
+      const nextChapter = (mod.chapterNumbers || []).find(
+        (number) => !completedSet.has(number)
+      );
+      if (nextChapter !== undefined) {
+        continueTarget = { module: mod.number, chapter: nextChapter };
       }
-      continueTarget = { module: mod.number, chapter: nextChapter };
       break;
     }
   }

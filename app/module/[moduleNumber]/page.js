@@ -53,6 +53,7 @@ export default function ModulePage() {
           .from("progress")
           .select("chapter_number")
           .eq("user_id", session.user.id)
+          .eq("course_id", courseId)
           .eq("module_number", moduleNumber),
       ]);
 
@@ -64,8 +65,15 @@ export default function ModulePage() {
 
       setModuleRow(moduleResult.data);
       setChapters(chaptersResult.data || []);
+      const chapterNumbers = new Set(
+        (chaptersResult.data || []).map((chapter) => chapter.chapter_number)
+      );
       setCompletedSet(
-        new Set((progressResult.data || []).map((row) => row.chapter_number))
+        new Set(
+          (progressResult.data || [])
+            .map((row) => row.chapter_number)
+            .filter((number) => chapterNumbers.has(number))
+        )
       );
       setChecking(false);
     }
