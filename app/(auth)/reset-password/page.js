@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
+import PasswordChecklist from "@/components/ui/PasswordChecklist";
+import { isValidPassword } from "@/lib/validators";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function ResetPasswordPage() {
@@ -45,8 +47,10 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError("");
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!isValidPassword(password)) {
+      setError(
+        "Password needs 8+ characters, an uppercase letter, a number, and a special character."
+      );
       return;
     }
     if (password !== confirmPassword) {
@@ -115,6 +119,7 @@ export default function ResetPasswordPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 characters"
           />
+          <PasswordChecklist password={password} />
           <TextField
             id="confirmPassword"
             label="Confirm new password"

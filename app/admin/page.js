@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { isValidPassword } from "@/lib/validators";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -90,8 +91,10 @@ export default function AdminDashboardPage() {
     setResetError("");
     setResetSuccess(false);
 
-    if (newPassword.length < 8) {
-      setResetError("Password must be at least 8 characters.");
+    if (!isValidPassword(newPassword)) {
+      setResetError(
+        "Password needs 8+ characters, an uppercase letter, a number, and a special character."
+      );
       return;
     }
     if (newPassword !== confirmPassword) {

@@ -1,6 +1,6 @@
 export default function PasswordChecklist({ password }) {
   const requirements = [
-    { label: "At least 6 characters", met: password.length >= 6 },
+    { label: "At least 8 characters", met: password.length >= 8 },
     { label: "One uppercase letter (A-Z)", met: /[A-Z]/.test(password) },
     { label: "One number (0-9)", met: /[0-9]/.test(password) },
     { label: "One special character (e.g. @ ! #)", met: /[^A-Za-z0-9]/.test(password) },
