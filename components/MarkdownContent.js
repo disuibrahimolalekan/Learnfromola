@@ -32,7 +32,7 @@ const sanitizeSchema = {
 export default function MarkdownContent({ children }) {
   return (
     <ReactMarkdown
-      rehypePlugins={[[rehypeSanitize, sanitizeSchema], rehypeRaw]}
+      rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
       components={{
         a: ({ href, children: linkChildren }) => {
           if (isYoutubeUrl(href)) {

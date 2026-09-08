@@ -50,8 +50,9 @@ export function middleware(request) {
   const hostname = request.headers.get("host") || "";
   const isAdminHost = hostname.startsWith("admin.");
 
-  // Rate limit API routes (especially auth and webhook endpoints)
-  if (url.pathname.startsWith("/api/")) {
+  // Selar retries must reach the handler so signed purchases are not lost to
+  // the browser/API traffic budget.
+  if (url.pathname.startsWith("/api/") && url.pathname !== "/api/selar-webhook") {
     const ip = getClientIP(request);
     const { allowed, remaining } = checkRateLimit(`api:${ip}`);
 

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import UndoToast from "@/components/admin/UndoToast";
+import { getPendingUndo, clearPendingUndo } from "@/lib/undoStore";
 
 export default function AdminModulesPage() {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function AdminModulesPage() {
   const [courseName, setCourseName] = useState("");
   const [modules, setModules] = useState([]);
   const [creating, setCreating] = useState(false);
+  const [undo, setUndo] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -60,9 +63,57 @@ export default function AdminModulesPage() {
         }))
       );
       setChecking(false);
+
+      const pending = getPendingUndo();
+      if (pending?.type === "module" && pending.courseId === courseId) {
+        setUndo(pending);
+      }
     }
     load();
   }, [router, courseId]);
+
+  async function handleUndoModule() {
+    if (!undo) return;
+
+    const { data: restoredModule, error: moduleError } = await supabase
+      .from("modules")
+      .insert({
+        course_id: undo.courseId,
+        number: undo.module.number,
+        title: undo.module.title,
+        intro_content: undo.module.intro_content,
+      })
+      .select("id")
+      .single();
+
+    if (moduleError || !restoredModule) {
+      alert(`Failed to restore module: ${moduleError?.message || "module was not created"}`);
+      return;
+    }
+
+    const chapters = (undo.chapters || []).map((chapter) => ({
+      course_id: undo.courseId,
+      module_id: restoredModule.id,
+      module_number: undo.module.number,
+      chapter_number: chapter.chapter_number,
+      title: chapter.title,
+      content: chapter.content,
+      video_url: chapter.video_url,
+    }));
+
+    if (chapters.length > 0) {
+      const { error: chaptersError } = await supabase.from("chapters").insert(chapters);
+      if (chaptersError) {
+        await supabase.from("modules").delete().eq("id", restoredModule.id);
+        alert(`Failed to restore module chapters: ${chaptersError.message}`);
+        return;
+      }
+    }
+
+    clearPendingUndo();
+    setUndo(null);
+    window.location.reload();
+  }
 
   async function handleAddModule() {
     const title = window.prompt("Title for the new module:");
@@ -161,6 +212,17 @@ export default function AdminModulesPage() {
           </Link>
         </div>
       </div>
+      {undo && (
+        <UndoToast
+          message={`Module ${undo.module.number} deleted.`}
+          expiresAt={undo.expiresAt}
+          onUndo={handleUndoModule}
+          onExpire={() => {
+            clearPendingUndo();
+            setUndo(null);
+          }}
+        />
+      )}
     </div>
   );
-  }
+}
