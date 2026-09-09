@@ -115,13 +115,13 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  console.log("Selar webhook payload:", JSON.stringify(body));
-
+  const orderId = extractOrderId(body);
   const email = extractBuyerEmail(body);
   const productCode = extractProductCode(body);
+  const logContext = `order_id=${orderId || "unknown"} product_code=${productCode || "unknown"}`;
 
   if (!email) {
-    console.warn("Selar webhook: could not find a buyer email in payload.");
+    console.warn(`Selar webhook failed (${logContext}): buyer email missing.`);
     return NextResponse.json(
       { error: "No email found in payload", received: body },
       { status: 200 }
@@ -129,7 +129,7 @@ export async function POST(request) {
   }
 
   if (!productCode) {
-    console.warn("Selar webhook: no product_code found in payload.");
+    console.warn(`Selar webhook failed (${logContext}): product code missing.`);
     return NextResponse.json(
       { error: "No product_code found in payload", received: body },
       { status: 200 }
@@ -154,7 +154,7 @@ export async function POST(request) {
     // yet. Log it clearly so it's never silently lost, but don't insert a
     // broken purchase row.
     console.warn(
-      `Selar webhook: no course found for product_code "${productCode}". Purchase not recorded.`
+      `Selar webhook failed (${logContext}): no matching course. Purchase not recorded.`
     );
     return NextResponse.json(
       { error: `No course matches product_code ${productCode}`, received: body },
@@ -174,13 +174,13 @@ export async function POST(request) {
     // The database unique constraint makes Selar retries idempotent. Treat a
     // duplicate as successfully received so Selar does not keep retrying it.
     if (error.code === "23505") {
-      console.log(`Duplicate purchase webhook acknowledged for ${email}`);
+      console.log(`Selar webhook succeeded (${logContext}): duplicate acknowledged.`);
       return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
     }
     console.error("Failed to record purchase:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  console.log(`Purchase recorded for course "${course.name}"`);
+  console.log(`Selar webhook succeeded (${logContext}): purchase recorded.`);
   return NextResponse.json({ received: true }, { status: 200 });
 }
