@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
@@ -38,13 +38,36 @@ export default function AddCoursePage() {
       return;
     }
 
+    const slug = slugify(trimmedName);
+    if (!slug) {
+      setError("Course name must contain letters or numbers.");
+      return;
+    }
+
     setSaving(true);
+
+    const { data: existingCourse, error: slugCheckError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (slugCheckError) {
+      setSaving(false);
+      setError(slugCheckError.message);
+      return;
+    }
+    if (existingCourse) {
+      setSaving(false);
+      setError("A course with this name already exists.");
+      return;
+    }
 
     const { data, error: insertError } = await supabase
       .from("courses")
       .insert({
         name: trimmedName,
-        slug: slugify(trimmedName),
+        slug,
         selar_product_code: trimmedCode,
       })
       .select("id")
