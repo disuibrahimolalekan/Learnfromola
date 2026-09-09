@@ -10,12 +10,6 @@ import { toYoutubeEmbedUrl } from "@/lib/youtube";
 import MarkdownContent from "@/components/MarkdownContent";
 import FlowChart from "@/components/ui/FlowChart";
 
-function stripQuiz(content) {
-  const marker = content.indexOf("### Chapter Quiz");
-  if (marker === -1) return content;
-  return content.slice(0, marker).trim();
-}
-
 export default function ChapterReaderPage() {
   const router = useRouter();
   const params = useParams();
@@ -138,7 +132,7 @@ export default function ChapterReaderPage() {
       ? `/module/${moduleNumber}/intro`
       : `/module/${moduleNumber}/chapter/${previousChapterNumber}`;
 
-  const displayContent = formatQuotes(stripQuiz(chapter.content));
+  const displayContent = formatQuotes(chapter.content);
 
   return (
     <div className="min-h-screen bg-bg pb-28">

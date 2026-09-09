@@ -4,16 +4,8 @@ import { formatQuotes } from "@/lib/formatContent";
 import { toYoutubeEmbedUrl } from "@/lib/youtube";
 import MarkdownContent from "@/components/MarkdownContent";
 
-function stripQuiz(content) {
-  const marker = content.indexOf("### Chapter Quiz");
-  if (marker === -1) return content;
-  return content.slice(0, marker).trim();
-}
-
-export default function ContentPreview({ eyebrow, title, videoUrl, content, isChapter = false }) {
-  const displayContent = formatQuotes(
-    isChapter ? stripQuiz(content || "") : content || ""
-  );
+export default function ContentPreview({ eyebrow, title, videoUrl, content }) {
+  const displayContent = formatQuotes(content || "");
 
   return (
     <div>
