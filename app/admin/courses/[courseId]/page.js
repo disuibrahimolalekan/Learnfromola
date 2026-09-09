@@ -4,34 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 
 export default function CourseLandingPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
 
-  const [checking, setChecking] = useState(true);
   const [courseName, setCourseName] = useState("");
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const { data: course } = await supabase
         .from("courses")
@@ -40,10 +25,10 @@ export default function CourseLandingPage() {
         .maybeSingle();
 
       setCourseName(course?.name || "");
-      setChecking(false);
+
     }
     load();
-  }, [router, courseId]);
+  }, [router, courseId, checking]);
 
   if (checking) {
     return (

@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { isValidPassword } from "@/lib/validators";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [checking, setChecking] = useState(true);
-  const [fullName, setFullName] = useState("");
+  const { checking, session } = useRequireAdmin();
+
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
 
@@ -22,37 +23,7 @@ export default function AdminDashboardPage() {
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const menuRef = useRef(null);
 
-  useEffect(() => {
-    async function verifyAdmin() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
-
-      setFullName(
-        session.user.user_metadata?.full_name || session.user.email.split("@")[0]
-      );
-      setChecking(false);
-    }
-
-    verifyAdmin();
-  }, [router]);
+  const fullName = session?.user.user_metadata?.full_name || session?.user.email?.split("@")[0] || "";
 
   useEffect(() => {
     async function loadCourses() {

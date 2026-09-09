@@ -4,16 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import UndoToast from "@/components/admin/UndoToast";
 import { setPendingUndo, getPendingUndo, clearPendingUndo } from "@/lib/undoStore";
 
 export default function AdminModuleEditPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
   const moduleNumber = Number(params.moduleNumber);
 
-  const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [introContent, setIntroContent] = useState("");
   const [hasIntro, setHasIntro] = useState(false);
@@ -25,23 +26,7 @@ export default function AdminModuleEditPage() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const [moduleResult, chaptersResult] = await Promise.all([
         supabase
@@ -62,7 +47,7 @@ export default function AdminModuleEditPage() {
       setIntroContent(moduleResult.data?.intro_content || "");
       setHasIntro(Boolean(moduleResult.data?.intro_content));
       setChapters(chaptersResult.data || []);
-      setChecking(false);
+
 
       // Was a chapter just deleted, sending us back here? Show its Undo toast.
       const pending = getPendingUndo();
@@ -76,7 +61,7 @@ export default function AdminModuleEditPage() {
       }
     }
     load();
-  }, [moduleNumber, courseId, router]);
+  }, [moduleNumber, courseId, router, checking]);
 
   async function handleSaveTitle() {
     setSaving(true);

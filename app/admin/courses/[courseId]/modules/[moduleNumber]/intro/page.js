@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
 import { normalizeMediaSpacing } from "@/lib/youtube";
 
 export default function ModuleIntroEditPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
   const moduleNumber = Number(params.moduleNumber);
 
-  const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [introContent, setIntroContent] = useState("");
@@ -25,23 +26,7 @@ export default function ModuleIntroEditPage() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const { data } = await supabase
         .from("modules")
@@ -53,10 +38,10 @@ export default function ModuleIntroEditPage() {
       setTitle(data?.title || "");
       setVideoUrl(data?.video_url || "");
       setIntroContent(data?.intro_content || "");
-      setChecking(false);
+
     }
     load();
-  }, [courseId, moduleNumber, router]);
+  }, [courseId, moduleNumber, router, checking]);
 
   async function handleSave() {
     setSaving(true);

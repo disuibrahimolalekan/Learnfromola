@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
 import { normalizeMediaSpacing } from "@/lib/youtube";
@@ -11,12 +12,12 @@ import { setPendingUndo } from "@/lib/undoStore";
 
 export default function AdminChapterEditPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
   const moduleNumber = Number(params.moduleNumber);
   const chapterNumber = Number(params.chapterNumber);
 
-  const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -29,23 +30,7 @@ export default function AdminChapterEditPage() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const { data } = await supabase
         .from("chapters")
@@ -58,10 +43,10 @@ export default function AdminChapterEditPage() {
       setTitle(data?.title || "");
       setContent(data?.content || "");
       setVideoUrl(data?.video_url || "");
-      setChecking(false);
+
     }
     load();
-  }, [courseId, moduleNumber, chapterNumber, router]);
+  }, [courseId, moduleNumber, chapterNumber, router, checking]);
 
   async function handleSave() {
     setSaving(true);
@@ -129,7 +114,6 @@ export default function AdminChapterEditPage() {
       title={title}
       videoUrl={videoUrl}
       content={content}
-      isChapter
     />
   );
 

@@ -4,16 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ContentPreview from "@/components/admin/ContentPreview";
 import { normalizeMediaSpacing } from "@/lib/youtube";
 
 export default function AdminChecklistEditPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
 
-  const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [viewMode, setViewMode] = useState("read");
@@ -23,23 +24,7 @@ export default function AdminChecklistEditPage() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const { data } = await supabase
         .from("pages")
@@ -50,10 +35,10 @@ export default function AdminChecklistEditPage() {
 
       setTitle(data?.title || "Security & Deployment Checklist");
       setContent(data?.content || "");
-      setChecking(false);
+
     }
     load();
-  }, [router, courseId]);
+  }, [router, courseId, checking]);
 
   async function handleSave() {
     setSaving(true);

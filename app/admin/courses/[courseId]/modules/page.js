@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import UndoToast from "@/components/admin/UndoToast";
 import { getPendingUndo, clearPendingUndo } from "@/lib/undoStore";
 
 export default function AdminModulesPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
 
-  const [checking, setChecking] = useState(true);
   const [courseName, setCourseName] = useState("");
   const [modules, setModules] = useState([]);
   const [creating, setCreating] = useState(false);
@@ -20,23 +21,7 @@ export default function AdminModulesPage() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const [courseResult, modulesResult, chaptersResult] = await Promise.all([
         supabase.from("courses").select("name").eq("id", courseId).maybeSingle(),
@@ -62,7 +47,7 @@ export default function AdminModulesPage() {
           chapterCount: countByModule[m.number] || 0,
         }))
       );
-      setChecking(false);
+
 
       const pending = getPendingUndo();
       if (pending?.type === "module" && pending.courseId === courseId) {
@@ -70,7 +55,7 @@ export default function AdminModulesPage() {
       }
     }
     load();
-  }, [router, courseId]);
+  }, [router, courseId, checking]);
 
   async function handleUndoModule() {
     if (!undo) return;

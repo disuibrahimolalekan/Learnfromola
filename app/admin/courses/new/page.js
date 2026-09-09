@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 
 // Turns a course name into a URL-safe slug, e.g. "AI Software Builder" -> "ai-software-builder".
 function slugify(name) {
@@ -16,35 +17,11 @@ function slugify(name) {
 
 export default function AddCoursePage() {
   const router = useRouter();
-  const [checking, setChecking] = useState(true);
+  const { checking } = useRequireAdmin();
   const [name, setName] = useState("");
   const [productCode, setProductCode] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function verify() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
-      setChecking(false);
-    }
-    verify();
-  }, [router]);
 
   async function handleCreate() {
     setError("");

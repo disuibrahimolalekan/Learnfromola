@@ -4,36 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 
 export default function StudentDetailPage() {
   const router = useRouter();
+  const { checking } = useRequireAdmin();
   const params = useParams();
   const courseId = params.courseId;
   const userId = params.userId;
 
-  const [checking, setChecking] = useState(true);
   const [studentInfo, setStudentInfo] = useState(null);
   const [moduleProgress, setModuleProgress] = useState([]);
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: adminRow } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!adminRow) {
-        await supabase.auth.signOut();
-        router.replace("/login");
-        return;
-      }
+      if (checking) return;
 
       const [studentsResult, modulesResult, chaptersResult, progressResult] = await Promise.all([
         supabase.rpc("get_course_students", { p_course_id: courseId }),
@@ -71,10 +56,10 @@ export default function StudentDetailPage() {
           total: totalByModule[m.number] || 0,
         }))
       );
-      setChecking(false);
+
     }
     load();
-  }, [router, courseId, userId]);
+  }, [router, courseId, userId, checking]);
 
   if (checking) {
     return (
