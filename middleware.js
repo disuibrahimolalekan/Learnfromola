@@ -48,6 +48,8 @@ setInterval(() => {
 export function middleware(request) {
   const url = request.nextUrl;
   const hostname = request.headers.get("host") || "";
+  // This host-header check assumes the proxy provides a trusted Host header;
+  // behind a different proxy, a spoofed header could bypass host routing.
   const isAdminHost = hostname.startsWith("admin.");
 
   // Selar retries must reach the handler so signed purchases are not lost to
