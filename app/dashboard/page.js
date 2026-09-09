@@ -157,7 +157,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-2xl px-6 py-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold text-text-primary">
+            <h1 className="font-display text-xl font-bold text-text-primary">
               Welcome back{fullName ? `, ${fullName.split(" ")[0]}` : ""}
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
@@ -268,11 +268,11 @@ export default function DashboardPage() {
             >
               Continue Learning
             </Link>
-          ) : (
+          ) : totalChapters > 0 && totalCompleted === totalChapters ? (
             <p className="mt-5 text-center text-sm font-medium text-emerald-600">
               You&apos;ve completed the entire course. 🎉
             </p>
-          )}
+          ) : null}
         </div>
 
         <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
