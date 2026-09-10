@@ -51,13 +51,18 @@ export async function POST(request) {
       "Learn From Ola",
     ].join("\n"),
     htmlContent: [
+      '<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">',
       `<p>Hey ${firstName},</p>`,
       "<p>You did it. All 6 modules, all 63 chapters, done.</p>",
       "<p>You went from understanding what software even is, to planning with AI instead of just prompting blindly, to shipping a real capstone project with proper security and deployment behind it. That's not a small thing. Most people who start a course like this never finish it. You did.</p>",
       "<p>So, what are you building next?</p>",
       "<p>If you're thinking about turning this into income, freelancing, or client work, the AI Freelance Playbook picks up exactly where this leaves off</p>",
       "<p>Either way, go build something</p>",
+      '<div style="text-align: center; margin: 30px 0;">',
+      '<a href="https://selar.com/ai-freelance-playbook" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Click to get the AI Freelance Playbook</a>',
+      "</div>",
       "<p>Learn From Ola</p>",
+      "</div>",
     ].join(""),
   });
 

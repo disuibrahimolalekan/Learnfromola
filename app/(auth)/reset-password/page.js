@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import PasswordChecklist from "@/components/ui/PasswordChecklist";
@@ -42,6 +43,15 @@ export default function ResetPasswordPage() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  // Auto-redirect to login after 3 seconds when the link is invalid/expired
+  useEffect(() => {
+    if (checking || validLink) return;
+    const timer = setTimeout(() => {
+      router.replace("/login");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [checking, validLink, router]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -89,6 +99,12 @@ export default function ResetPasswordPage() {
           This password reset link is invalid or has expired. Please request a
           new one.
         </p>
+        <Link
+          href="/login"
+          className="mt-4 block text-center text-sm font-medium text-primary hover:underline"
+        >
+          Back to login
+        </Link>
       </div>
     );
   }

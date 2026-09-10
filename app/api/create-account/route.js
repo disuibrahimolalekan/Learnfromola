@@ -71,7 +71,7 @@ export async function POST(request) {
 
   // Send welcome email
   const firstName = fullName.split(" ")[0];
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || "https://learnfromola.online"}/dashboard`;
+  const dashboardUrl = "https://course.learnfromola.online/dashboard";
 
   await sendBrevoEmail({
     toEmail: email,
@@ -86,12 +86,16 @@ export async function POST(request) {
       "Learn From Ola",
     ].join("\n"),
     htmlContent: [
+      '<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">',
       `<p>Hey ${firstName},</p>`,
       "<p>You're officially in. Welcome to the AI Software Builder Course.</p>",
       "<p>This entire platform you're about to learn on was vibe-coded with AI. Pay attention throughout the course, and by the end, you'll be able to build something just like it, maybe even better.</p>",
-      `<p>Start here: <a href="${dashboardUrl}">${dashboardUrl}</a></p>`,
+      '<div style="text-align: center; margin: 30px 0;">',
+      `<a href="${dashboardUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Start here</a>`,
+      "</div>",
       "<p>If you ever get stuck, just reply to this email.</p>",
       "<p>Learn From Ola</p>",
+      "</div>",
     ].join(""),
   });
 
