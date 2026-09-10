@@ -6,24 +6,19 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getModules } from "@/lib/courseStructure";
 import ProgressBar from "@/components/ui/ProgressBar";
-import { isValidPassword } from "@/lib/validators";
 import { getCurrentCourseId } from "@/lib/currentCourse";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [fullName, setFullName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [modules, setModules] = useState([]);
   const [completedByModule, setCompletedByModule] = useState({});
   const [checklistTitle, setChecklistTitle] = useState("Security & Deployment Checklist");
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showResetForm, setShowResetForm] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [resetError, setResetError] = useState("");
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -38,6 +33,7 @@ export default function DashboardPage() {
       }
 
       setFullName(session.user.user_metadata?.full_name || "");
+      setUserEmail(session.user.email || "");
 
       const courseId = await getCurrentCourseId();
       if (!courseId) {
@@ -80,7 +76,7 @@ export default function DashboardPage() {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
-        setShowResetForm(false);
+        setResetSent(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -92,34 +88,16 @@ export default function DashboardPage() {
     router.replace("/login");
   }
 
-  async function handlePasswordReset(e) {
-    e.preventDefault();
-    setResetError("");
-    setResetSuccess(false);
-
-    if (!isValidPassword(newPassword)) {
-      setResetError(
-        "Password needs 8+ characters, an uppercase letter, a number, and a special character."
-      );
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setResetError("Passwords do not match.");
-      return;
-    }
-
-    setResetSubmitting(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setResetSubmitting(false);
-
+  async function handleResetPassword() {
+    setResetSent(false);
+    const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     if (error) {
-      setResetError(error.message);
-      return;
+      console.error("Password reset email error:", error.message);
+    } else {
+      setResetSent(true);
     }
-
-    setResetSuccess(true);
-    setNewPassword("");
-    setConfirmPassword("");
   }
 
   if (checking) {
@@ -169,9 +147,7 @@ export default function DashboardPage() {
             <button
               onClick={() => {
                 setMenuOpen((open) => !open);
-                setShowResetForm(false);
-                setResetError("");
-                setResetSuccess(false);
+                setResetSent(false);
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               aria-label="Account menu"
@@ -181,10 +157,14 @@ export default function DashboardPage() {
 
             {menuOpen && (
               <div className="absolute right-0 top-12 z-10 w-64 rounded-2xl border border-border bg-card p-2 shadow-md">
-                {!showResetForm ? (
+                {resetSent ? (
+                  <p className="px-4 py-2.5 text-sm text-emerald-600">
+                    Check your email for a reset link.
+                  </p>
+                ) : (
                   <>
                     <button
-                      onClick={() => setShowResetForm(true)}
+                      onClick={handleResetPassword}
                       className="block w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium text-text-primary transition hover:bg-primary/5 active:bg-primary/10"
                     >
                       Reset Password
@@ -196,52 +176,6 @@ export default function DashboardPage() {
                       Sign Out
                     </button>
                   </>
-                ) : (
-                  <form onSubmit={handlePasswordReset} className="p-2">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">
-                      Set a new password
-                    </p>
-                    <input
-                      type="password"
-                      placeholder="New password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Confirm new password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                    />
-
-                    {resetError && (
-                      <p className="mb-2 text-xs text-red-600">{resetError}</p>
-                    )}
-                    {resetSuccess && (
-                      <p className="mb-2 text-xs font-medium text-emerald-600">
-                        Password updated successfully.
-                      </p>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        disabled={resetSubmitting}
-                        className="flex-1 rounded-lg bg-gradient-to-r from-primary to-secondary px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
-                      >
-                        {resetSubmitting ? "Saving…" : "Save"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowResetForm(false)}
-                        className="flex-1 rounded-lg border border-border px-3 py-2 text-xs font-medium text-text-primary"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
                 )}
               </div>
             )}

@@ -28,7 +28,7 @@ export default function CreateAccountPage() {
     if (!isRequired(password)) next.password = "Create a password.";
     else if (!isValidPassword(password))
       next.password =
-        "Password needs 8+ characters, an uppercase letter, a number, and a special character.";
+        "Password needs 6+ characters, an uppercase letter, a number, and a special character.";
 
     if (!isRequired(confirmPassword)) next.confirmPassword = "Confirm your password.";
     else if (confirmPassword !== password) next.confirmPassword = "Passwords don't match.";
@@ -114,7 +114,7 @@ export default function CreateAccountPage() {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder="At least 6 characters"
           error={errors.password}
         />
         <PasswordChecklist password={password} />

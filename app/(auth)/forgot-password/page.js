@@ -40,13 +40,13 @@ export default function ForgotPasswordPage() {
         Reset your password
       </h2>
       <p className="mt-1 text-sm text-text-secondary">
-        Enter the email you used when purchasing the course.
+        Enter your account email.
       </p>
 
       {submitted ? (
         <div className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-sm font-medium text-emerald-800">
-            If that email is on file, reset instructions are on the way.
+            Check your email, if that email matches an account, reset instructions are on the way.
           </p>
         </div>
       ) : (

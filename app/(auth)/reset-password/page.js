@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
 
     if (!isValidPassword(password)) {
       setError(
-        "Password needs 8+ characters, an uppercase letter, a number, and a special character."
+        "Password needs 6+ characters, an uppercase letter, a number, and a special character."
       );
       return;
     }
@@ -117,7 +117,7 @@ export default function ResetPasswordPage() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="At least 6 characters"
           />
           <PasswordChecklist password={password} />
           <TextField
