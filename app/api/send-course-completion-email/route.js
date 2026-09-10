@@ -9,39 +9,34 @@ export async function POST(request) {
   }
 
   const body = await request.json().catch(() => null);
-  const { userId, email, firstName } = body || {};
+  const { userId, courseId, email, firstName } = body || {};
 
-  if (!userId || !email) {
-    return NextResponse.json({ error: "User ID and email are required." }, { status: 400 });
+  if (!userId || !courseId || !email) {
+    return NextResponse.json({ error: "User ID, course ID, and email are required." }, { status: 400 });
   }
 
-  // Check if completion email has already been sent for this user
-  const { data: existing, error: checkError } = await supabaseAdmin
-    .from("completion_emails_sent")
-    .select("user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (checkError) {
-    console.error("send-course-completion-email: error checking existing record:", checkError.message);
-    return NextResponse.json({ error: "Tracking error" }, { status: 500 });
-  }
-
-  if (existing) {
-    return NextResponse.json({ message: "Completion email already sent." }, { status: 200 });
-  }
-
-  // Insert tracking record first
+  // Attempt to insert a tracking record. The unique constraint on
+  // (user_id, course_id) guarantees this only succeeds once per user per course.
+  // If the insert fails due to the unique constraint being violated, we treat
+  // that as proof the email was already sent and return success without
+  // sending again. This handles race conditions correctly.
   const { error: insertError } = await supabaseAdmin
     .from("completion_emails_sent")
-    .insert({ user_id: userId });
+    .insert({ user_id: userId, course_id: courseId });
 
   if (insertError) {
+    // Check if it's a unique constraint violation (23505 is PostgreSQL's unique violation code)
+    if (insertError.code === "23505") {
+      // Email was already sent and tracked — this is expected, not an error
+      return NextResponse.json({ message: "Completion email already sent." }, { status: 200 });
+    }
+
+    // Any other database error
     console.error("send-course-completion-email: error inserting tracking record:", insertError.message);
     return NextResponse.json({ error: "Failed to track email" }, { status: 500 });
   }
 
-  // Send the email
+  // Insert succeeded — this is the first time, so send the email
   const result = await sendBrevoEmail({
     toEmail: email,
     toName: firstName,

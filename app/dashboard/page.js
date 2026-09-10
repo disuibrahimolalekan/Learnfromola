@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const [resetNotification, setResetNotification] = useState(null);
   const menuRef = useRef(null);
 
-  // Track whether we've already fired the completion email for this user
+  // Track whether we've already triggered the completion email check for this user in this session
   const completionEmailFired = useRef(false);
 
   useEffect(() => {
@@ -74,6 +74,8 @@ export default function DashboardPage() {
       setChecking(false);
 
       // Check for course completion and trigger completion email
+      // Using corrected condition: totalChapters > 0 && totalCompleted === totalChapters
+      // (NOT the older continueTarget === null logic)
       const totalChaptersCount = modulesList.reduce(
         (sum, m) => sum + m.chapterCount,
         0
@@ -84,29 +86,26 @@ export default function DashboardPage() {
       );
 
       if (totalChaptersCount > 0 && totalCompletedCount === totalChaptersCount) {
-        // Trigger completion email (once per user via ref guard)
+        // Trigger completion email API (only once per user session)
         if (!completionEmailFired.current) {
           completionEmailFired.current = true;
 
-          const { error: insertError } = await supabase
-            .from("completion_emails_sent")
-            .insert({ user_id: session.user.id });
-
-          if (insertError) {
-            console.error("Failed to track completion email:", insertError.message);
-          } else {
-            const firstName = session.user.user_metadata?.full_name
+          const firstName = session.user.user_metadata?.full_name
             ? session.user.user_metadata.full_name.split(" ")[0]
             : "";
-            const response = await fetch("/api/send-course-completion-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId: session.user.id, email: session.user.email, firstName }),
-            });
+          const response = await fetch("/api/send-course-completion-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: session.user.id,
+              courseId: courseId,
+              email: session.user.email,
+              firstName,
+            }),
+          });
 
-            if (!response.ok) {
-              console.error("Failed to send completion email");
-            }
+          if (!response.ok) {
+            console.error("Failed to send completion email");
           }
         }
       }
