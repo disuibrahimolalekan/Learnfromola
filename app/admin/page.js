@@ -14,7 +14,7 @@ export default function AdminDashboardPage() {
   const [loadingCourses, setLoadingCourses] = useState(true);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetNotification, setResetNotification] = useState(null);
   const menuRef = useRef(null);
 
   const fullName = session?.user.user_metadata?.full_name || session?.user.email?.split("@")[0] || "";
@@ -39,12 +39,18 @@ export default function AdminDashboardPage() {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
-        setResetSent(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Auto-dismiss reset notification after 3 seconds
+  useEffect(() => {
+    if (!resetNotification) return;
+    const timer = setTimeout(() => setResetNotification(null), 3000);
+    return () => clearTimeout(timer);
+  }, [resetNotification]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -52,7 +58,6 @@ export default function AdminDashboardPage() {
   }
 
   async function handleResetPassword() {
-    setResetSent(false);
     const email = session?.user.email;
     if (!email) return;
 
@@ -62,7 +67,9 @@ export default function AdminDashboardPage() {
     if (error) {
       console.error("Password reset email error:", error.message);
     } else {
-      setResetSent(true);
+      setResetNotification(
+        "Check your email for a reset link, also check your spam folder if you don't see it."
+      );
     }
   }
 
@@ -93,7 +100,6 @@ export default function AdminDashboardPage() {
             <button
               onClick={() => {
                 setMenuOpen((open) => !open);
-                setResetSent(false);
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               aria-label="Account menu"
@@ -103,10 +109,19 @@ export default function AdminDashboardPage() {
 
             {menuOpen && (
               <div className="absolute right-0 top-12 z-10 w-64 rounded-2xl border border-border bg-card p-2 shadow-md">
-                {resetSent ? (
-                  <p className="px-4 py-2.5 text-sm text-emerald-600">
-                    Check your email for a reset link.
-                  </p>
+                {resetNotification ? (
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm text-emerald-600 flex-1 pr-2">
+                      {resetNotification}
+                    </p>
+                    <button
+                      onClick={() => setResetNotification(null)}
+                      className="flex-shrink-0 rounded-lg p-1 text-xs text-text-secondary hover:text-text-primary"
+                      aria-label="Dismiss"
+                    >
+                      ×
+                    </button>
+                  </div>
                 ) : (
                   <>
                     <button

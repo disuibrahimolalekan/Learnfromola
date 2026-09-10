@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isValidEmail, isValidPassword } from "@/lib/validators";
+import { sendBrevoEmail } from "@/lib/brevo";
 
 const COURSE_SLUG = "ai-software-builder";
 const PURCHASE_ERROR =
@@ -67,6 +68,32 @@ export async function POST(request) {
     console.error("create-account: Auth user creation failed:", createError.message);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
+
+  // Send welcome email
+  const firstName = fullName.split(" ")[0];
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || "https://learnfromola.online"}/dashboard`;
+
+  await sendBrevoEmail({
+    toEmail: email,
+    toName: fullName,
+    subject: "You're in, let's start building",
+    textContent: [
+      `Hey ${firstName},`,
+      "You're officially in. Welcome to the AI Software Builder Course.",
+      "This entire platform you're about to learn on was vibe-coded with AI. Pay attention throughout the course, and by the end, you'll be able to build something just like it, maybe even better.",
+      `Start here: ${dashboardUrl}`,
+      "If you ever get stuck, just reply to this email.",
+      "Learn From Ola",
+    ].join("\n"),
+    htmlContent: [
+      `<p>Hey ${firstName},</p>`,
+      "<p>You're officially in. Welcome to the AI Software Builder Course.</p>",
+      "<p>This entire platform you're about to learn on was vibe-coded with AI. Pay attention throughout the course, and by the end, you'll be able to build something just like it, maybe even better.</p>",
+      `<p>Start here: <a href="${dashboardUrl}">${dashboardUrl}</a></p>`,
+      "<p>If you ever get stuck, just reply to this email.</p>",
+      "<p>Learn From Ola</p>",
+    ].join(""),
+  });
 
   return NextResponse.json({ userId: user.user.id }, { status: 201 });
 }

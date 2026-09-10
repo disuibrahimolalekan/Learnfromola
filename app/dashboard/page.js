@@ -13,13 +13,17 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(true);
   const [fullName, setFullName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState(null);
   const [modules, setModules] = useState([]);
   const [completedByModule, setCompletedByModule] = useState({});
   const [checklistTitle, setChecklistTitle] = useState("Security & Deployment Checklist");
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetNotification, setResetNotification] = useState(null);
   const menuRef = useRef(null);
+
+  // Track whether we've already fired the completion email for this user
+  const completionEmailFired = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -34,6 +38,7 @@ export default function DashboardPage() {
 
       setFullName(session.user.user_metadata?.full_name || "");
       setUserEmail(session.user.email || "");
+      setUserId(session.user.id);
 
       const courseId = await getCurrentCourseId();
       if (!courseId) {
@@ -67,6 +72,44 @@ export default function DashboardPage() {
       setCompletedByModule(byModule);
 
       setChecking(false);
+
+      // Check for course completion and trigger completion email
+      const totalChaptersCount = modulesList.reduce(
+        (sum, m) => sum + m.chapterCount,
+        0
+      );
+      const totalCompletedCount = Object.values(byModule).reduce(
+        (sum, set) => sum + set.size,
+        0
+      );
+
+      if (totalChaptersCount > 0 && totalCompletedCount === totalChaptersCount) {
+        // Trigger completion email (once per user via ref guard)
+        if (!completionEmailFired.current) {
+          completionEmailFired.current = true;
+
+          const { error: insertError } = await supabase
+            .from("completion_emails_sent")
+            .insert({ user_id: session.user.id });
+
+          if (insertError) {
+            console.error("Failed to track completion email:", insertError.message);
+          } else {
+            const firstName = session.user.user_metadata?.full_name
+            ? session.user.user_metadata.full_name.split(" ")[0]
+            : "";
+            const response = await fetch("/api/send-course-completion-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: session.user.id, email: session.user.email, firstName }),
+            });
+
+            if (!response.ok) {
+              console.error("Failed to send completion email");
+            }
+          }
+        }
+      }
     }
 
     load();
@@ -76,12 +119,18 @@ export default function DashboardPage() {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
-        setResetSent(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Auto-dismiss reset notification after 3 seconds
+  useEffect(() => {
+    if (!resetNotification) return;
+    const timer = setTimeout(() => setResetNotification(null), 3000);
+    return () => clearTimeout(timer);
+  }, [resetNotification]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -89,14 +138,15 @@ export default function DashboardPage() {
   }
 
   async function handleResetPassword() {
-    setResetSent(false);
     const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
       console.error("Password reset email error:", error.message);
     } else {
-      setResetSent(true);
+      setResetNotification(
+        "Check your email for a reset link, also check your spam folder if you don't see it."
+      );
     }
   }
 
@@ -147,7 +197,6 @@ export default function DashboardPage() {
             <button
               onClick={() => {
                 setMenuOpen((open) => !open);
-                setResetSent(false);
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-sm font-semibold text-text-primary transition hover:bg-primary/5 active:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               aria-label="Account menu"
@@ -157,10 +206,19 @@ export default function DashboardPage() {
 
             {menuOpen && (
               <div className="absolute right-0 top-12 z-10 w-64 rounded-2xl border border-border bg-card p-2 shadow-md">
-                {resetSent ? (
-                  <p className="px-4 py-2.5 text-sm text-emerald-600">
-                    Check your email for a reset link.
-                  </p>
+                {resetNotification ? (
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm text-emerald-600 flex-1 pr-2">
+                      {resetNotification}
+                    </p>
+                    <button
+                      onClick={() => setResetNotification(null)}
+                      className="flex-shrink-0 rounded-lg p-1 text-xs text-text-secondary hover:text-text-primary"
+                      aria-label="Dismiss"
+                    >
+                      ×
+                    </button>
+                  </div>
                 ) : (
                   <>
                     <button
