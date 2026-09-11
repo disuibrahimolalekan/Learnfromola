@@ -255,7 +255,7 @@ export default function DashboardPage() {
           {continueTarget ? (
             <Link
               href={`/module/${continueTarget.module}/chapter/${continueTarget.chapter}`}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+              className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 active:brightness-90"
             >
               Continue Learning
             </Link>

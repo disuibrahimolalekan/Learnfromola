@@ -132,7 +132,7 @@ export default function AddCoursePage() {
           <button
             onClick={handleCreate}
             disabled={saving}
-            className="mt-5 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+            className="mt-5 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 active:brightness-90 disabled:opacity-60"
           >
             {saving ? "Creating…" : "Create Course"}
           </button>

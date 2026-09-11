@@ -68,7 +68,7 @@ export default function ModuleIntroPage() {
         </p>
         <Link
           href={`/module/${moduleNumber}`}
-          className="rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-sm font-semibold text-white shadow-sm"
+          className="rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 active:brightness-90"
         >
           Back to Module
         </Link>
@@ -117,7 +117,7 @@ export default function ModuleIntroPage() {
 
           <Link
             href={`/module/${moduleNumber}/chapter/1`}
-            className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-gradient-to-r from-primary to-secondary px-3 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+            className="flex flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-gradient-to-r from-primary to-secondary px-3 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 active:brightness-90"
           >
             Next →
           </Link>

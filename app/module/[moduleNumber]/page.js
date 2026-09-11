@@ -97,7 +97,7 @@ export default function ModulePage() {
         </p>
         <Link
           href="/dashboard"
-          className="rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-sm font-semibold text-white shadow-sm"
+          className="rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 active:brightness-90"
         >
           Back to Dashboard
         </Link>

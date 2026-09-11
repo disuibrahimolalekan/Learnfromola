@@ -96,7 +96,7 @@ export default function ModuleIntroEditPage() {
             {previewNode}
             <button
               onClick={() => setViewMode("edit")}
-              className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+              className="mt-4 w-full rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 active:brightness-90"
             >
               Edit Content
             </button>
@@ -116,7 +116,7 @@ export default function ModuleIntroEditPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+                className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 active:brightness-90 disabled:opacity-60"
               >
                 {saving ? "Saving…" : "Save Introduction"}
               </button>
@@ -210,7 +210,7 @@ export default function ModuleIntroEditPage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 disabled:opacity-60"
+                    className="flex-1 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105 active:brightness-90 disabled:opacity-60"
                   >
                     {saving ? "Saving…" : "Save Introduction"}
                   </button>

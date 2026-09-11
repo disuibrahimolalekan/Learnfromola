@@ -150,7 +150,7 @@ export default function AdminDashboardPage() {
           </h2>
           <Link
             href="/admin/courses/new"
-            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-xs font-semibold text-white shadow-sm"
+            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-105 active:brightness-90"
           >
             + Add Course
           </Link>
